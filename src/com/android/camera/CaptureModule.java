@@ -475,7 +475,9 @@ public class CaptureModule implements CameraModule, PhotoController,
             new CaptureRequest.Key<>("org.quic.camera.CustomNoiseReduction.CustomNoiseReduction", byte.class);
 
     public static final CameraCharacteristics.Key<int[]> eis_config_table = new CameraCharacteristics.Key<>(
-            "org.quic.camera2.VideoEisLIveshotConfigurations.info.VideoEisLIveshotConfigurationsTable",int[].class);
+            "org.quic.camera2.VideoConfigurations.info.VideoConfigurationsTable",int[].class);
+    public static final CameraCharacteristics.Key<Byte> is_camera_fd_supported = new CameraCharacteristics.Key<>(
+            "org.quic.camera.FDRendering.isFDRenderingInCameraUISupported",byte.class);
 
     public static final CaptureRequest.Key<Byte> sensor_mode_fs =
             new CaptureRequest.Key<>("org.quic.camera.SensorModeFS ", byte.class);
@@ -2038,7 +2040,8 @@ public class CaptureModule implements CameraModule, PhotoController,
             mIsPreviewingVideo = true;
             if (ApiHelper.isAndroidPOrHigher()) {
                 if (isHighSpeedRateCapture()) {
-                    if (mSettingsManager.isHFRLiveshotSupported()){
+                    if (mSettingsManager.isLiveshotSupported(mVideoSize,
+                            mSettingsManager.getVideoFPS())){
                         surfaces.add(mVideoSnapshotImageReader.getSurface());
                     }
                     CaptureRequest initialRequest = mVideoRecordRequestBuilder.build();
@@ -2051,7 +2054,7 @@ public class CaptureModule implements CameraModule, PhotoController,
                 }
             } else {
                 if (isHighSpeedRateCapture()) {
-                    if (mSettingsManager.isHFRLiveshotSupported()){
+                    if (mSettingsManager.isLiveshotSupported(mVideoSize,mSettingsManager.getVideoFPS())){
                         surfaces.add(mVideoSnapshotImageReader.getSurface());
                     }
                     mCameraDevice[cameraId].createConstrainedHighSpeedCaptureSession(surfaces, new
@@ -2091,7 +2094,8 @@ public class CaptureModule implements CameraModule, PhotoController,
                                 }
                             }, mCameraHandler);
                 } else {
-                    surfaces.add(mVideoSnapshotImageReader.getSurface());
+                    if (mSettingsManager.isLiveshotSupported(mVideoSize,mSettingsManager.getVideoFPS()))
+                        surfaces.add(mVideoSnapshotImageReader.getSurface());
                     String zzHDR = mSettingsManager.getValue(SettingsManager.KEY_VIDEO_HDR_VALUE);
                     boolean zzHdrStatue = zzHDR.equals("1");
                     // if enable ZZHDR mode, don`t call the setOpModeForVideoStream method.
@@ -2986,10 +2990,13 @@ public class CaptureModule implements CameraModule, PhotoController,
                     }
 
                 }
-
-                mLongshoting = false;
-                mNumFramesArrived.getAndSet(0);
-                unlockFocus(getMainCameraId());
+                if (mNumFramesArrived.get() < mShotNum && mLongshotActive) {
+                    captureStillPicture(CURRENT_ID);
+                }else {
+                    mLongshoting = false;
+                    mNumFramesArrived.getAndSet(0);
+                    unlockFocus(getMainCameraId());
+                }
             }
         };
 
@@ -3002,7 +3009,8 @@ public class CaptureModule implements CameraModule, PhotoController,
             burstShotFpsNums = (int)(30/mSettingsManager.getmaxBurstShotFPS()) - 1;
         }
         burstShotFpsNums = PersistUtil.isBurstShotFpsNums() > 0 ? PersistUtil.isBurstShotFpsNums() : burstShotFpsNums;
-        for (int i = 0; i < PersistUtil.getLongshotShotLimit(); i++) {
+        int totalNums = PersistUtil.getLongshotShotLimit()/(burstShotFpsNums + 1);
+        for (int i = 0; i < totalNums; i++) {
             for (int j = 0; j < burstShotFpsNums; j++) {
                 mPreviewRequestBuilder[id].setTag("preview");
                 burstList.add(mPreviewRequestBuilder[id].build());
@@ -4191,12 +4199,6 @@ public class CaptureModule implements CameraModule, PhotoController,
             width = mVideoSize.getWidth();
             height = mVideoSize.getHeight();
         }
-        int[] maxPreviewSize = mSettingsManager.getMaxPreviewSize();
-        if (maxPreviewSize != null) {
-            width = maxPreviewSize[0];
-            height = maxPreviewSize[1];
-        }
-
         Point previewSize = PersistUtil.getCameraPreviewSize();
         if (previewSize != null) {
             width = previewSize.x;
@@ -5307,13 +5309,15 @@ public class CaptureModule implements CameraModule, PhotoController,
             List<Surface> outputSurfaces, CameraCaptureSession.StateCallback listener,
             Handler handler, CaptureRequest initialRequest) throws CameraAccessException {
         List<OutputConfiguration> outConfigurations = new ArrayList<>(outputSurfaces.size());
-        if (mSettingsManager.isHeifWriterEncoding() && mLiveShotInitHeifWriter != null) {
-            mLiveShotOutput = new OutputConfiguration(
-                    mLiveShotInitHeifWriter.getInputSurface());
-            mLiveShotOutput.enableSurfaceSharing();
-            outConfigurations.add(mLiveShotOutput);
-        } else {
-            outputSurfaces.add(mVideoSnapshotImageReader.getSurface());
+        if (mSettingsManager.isLiveshotSupported(mVideoSize,mSettingsManager.getVideoFPS())){
+            if (mSettingsManager.isHeifWriterEncoding() && mLiveShotInitHeifWriter != null) {
+                mLiveShotOutput = new OutputConfiguration(
+                        mLiveShotInitHeifWriter.getInputSurface());
+                mLiveShotOutput.enableSurfaceSharing();
+                outConfigurations.add(mLiveShotOutput);
+            } else {
+                outputSurfaces.add(mVideoSnapshotImageReader.getSurface());
+            }
         }
 
         for (Surface surface : outputSurfaces) {
@@ -5446,13 +5450,11 @@ public class CaptureModule implements CameraModule, PhotoController,
                     mUI.resetPauseButton();
                     mRecordingTotalTime = 0L;
                     mRecordingStartTime = SystemClock.uptimeMillis();
-                    if (isHighSpeedRateCapture()) {
-                        if (mSettingsManager.isHFRLiveshotSupported()){
-                            mUI.enableShutter(true);
-                        } else {
-                            mUI.enableShutter(false);
-                        }
-
+                    if (mSettingsManager.isLiveshotSupported(mVideoSize,
+                            mSettingsManager.getVideoFPS())){
+                        mUI.enableShutter(true);
+                    } else {
+                        mUI.enableShutter(false);
                     }
                     mUI.showRecordingUI(true, false);
                     updateRecordingTime();
@@ -6425,10 +6427,8 @@ public class CaptureModule implements CameraModule, PhotoController,
 
         if (mCurrentSceneMode.mode == CameraMode.HFR ||
                 mCurrentSceneMode.mode == CameraMode.VIDEO) {
-            if (!isHighSpeedRateCapture()) {
-                if (mUI.isShutterEnabled()) {
-                    captureVideoSnapshot(getMainCameraId());
-                }
+            if (mSettingsManager.isLiveshotSupported(mVideoSize,mSettingsManager.getVideoFPS())){
+                captureVideoSnapshot(getMainCameraId());
             }
             return;
         }
@@ -8016,24 +8016,54 @@ public class CaptureModule implements CameraModule, PhotoController,
 
         double targetRatio = (double) pictureSize.getWidth() / pictureSize.getHeight();
         int index = 0;
+        int point_max[]  = mSettingsManager.getMaxPreviewSize();
+        int max_size = -1;
+        if (point_max != null){
+            max_size = point_max[0] * point_max[1];
+        }
         for (Size s : prevSizes) {
+            if (max_size != -1){
+                int size = s.getWidth() * s.getHeight();
+                if (s.getWidth() == s.getHeight()){
+                    if (s.getWidth() > Math.max(point_max[0],point_max[1]))
+                        continue;
+                } else if (size > max_size || size == 0) {
+                    continue;
+                }
+            }
             points[index++] = new Point(s.getWidth(), s.getHeight());
         }
 
         int optimalPickIndex = CameraUtil.getOptimalPreviewSize(mActivity, points, targetRatio);
-        return (optimalPickIndex == -1) ? null : prevSizes[optimalPickIndex];
+        return (optimalPickIndex == -1) ? null :
+                new Size(points[optimalPickIndex].x,points[optimalPickIndex].y);
     }
 
     private Size getOptimalVideoPreviewSize(Size VideoSize, Size[] prevSizes) {
         Point[] points = new Point[prevSizes.length];
 
         int index = 0;
+        int point_max[]  = mSettingsManager.getMaxPreviewSize();
+        int max_size = -1;
+        if (point_max != null){
+            max_size = point_max[0] * point_max[1];
+        }
         for (Size s : prevSizes) {
+            if (max_size != -1){
+                int size = s.getWidth() * s.getHeight();
+                if (s.getWidth() == s.getHeight()){
+                    if (s.getWidth() > Math.max(point_max[0],point_max[1]))
+                        continue;
+                } else if (size > max_size || size == 0) {
+                    continue;
+                }
+            }
             points[index++] = new Point(s.getWidth(), s.getHeight());
         }
 
         int optimalPickIndex = CameraUtil.getOptimalVideoPreviewSize(mActivity, points, VideoSize);
-        return (optimalPickIndex == -1) ? null : prevSizes[optimalPickIndex];
+        return (optimalPickIndex == -1) ? null :
+                new Size(points[optimalPickIndex].x,points[optimalPickIndex].y);
     }
 
     public TrackingFocusRenderer getTrackingForcusRenderer() {
