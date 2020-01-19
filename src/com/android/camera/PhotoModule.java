@@ -391,6 +391,8 @@ public class PhotoModule
     private int mRemainingPhotos = -1;
     private static final int SELFIE_FLASH_DURATION = 680;
 
+    private boolean mUseFrontCamera = false;
+
     private class SelfieThread extends Thread {
         public void run() {
             try {
@@ -608,11 +610,11 @@ public class PhotoModule
         CameraSettings.upgradeLocalPreferences(mPreferences.getLocal());
 
         mUI = new PhotoUI(activity, this, parent);
+        initializeControlByIntent();
         if (mOpenCameraThread == null) {
             mOpenCameraThread = new OpenCameraThread();
             mOpenCameraThread.start();
         }
-        initializeControlByIntent();
         mQuickCapture = mActivity.getIntent().getBooleanExtra(EXTRA_QUICK_CAPTURE, false);
         mLocationManager = new LocationManager(mActivity, this);
         mSensorManager = (SensorManager)(mActivity.getSystemService(Context.SENSOR_SERVICE));
@@ -4418,6 +4420,13 @@ public class PhotoModule
         if (myExtras != null) {
             mSaveUri = (Uri) myExtras.getParcelable(MediaStore.EXTRA_OUTPUT);
             mCropValue = myExtras.getString("crop");
+            mUseFrontCamera = myExtras.getBoolean("android.intent.extra.USE_FRONT_CAMERA", false)
+                    || myExtras.getBoolean("com.google.assistant.extra.USE_FRONT_CAMERA", false);
+            if (mUseFrontCamera){
+                int frontCameraId = CameraHolder.instance().getFrontCameraId();
+                if (frontCameraId != -1)
+                    mCameraId = frontCameraId;
+            }
         }
     }
 
