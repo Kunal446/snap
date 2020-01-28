@@ -125,9 +125,9 @@ public class SettingsActivity extends PreferenceActivity {
             if (key.equals(SettingsManager.KEY_VIDEO_QUALITY)) {
                 updatePreference(SettingsManager.KEY_VIDEO_HIGH_FRAME_RATE);
                 updatePreference(SettingsManager.KEY_VIDEO_ENCODER);
-            }else if ( key.equals(SettingsManager.KEY_VIDEO_ENCODER) ) {
+            } else if (key.equals(SettingsManager.KEY_VIDEO_ENCODER) ) {
                 updatePreference(SettingsManager.KEY_VIDEO_ENCODER_PROFILE);
-            } else if ( key.equals(SettingsManager.KEY_VIDEO_HIGH_FRAME_RATE) ) {
+            } else if (key.equals(SettingsManager.KEY_VIDEO_HIGH_FRAME_RATE)) {
                 value = ((ListPreference) p).getValue();
                 if (!value.equals("off")) {
                     int fpsRate = Integer.parseInt(value.substring(3));
@@ -158,9 +158,8 @@ public class SettingsActivity extends PreferenceActivity {
                 SettingsManager.Values values = map.get(state.key);
                 boolean enabled = values.overriddenValue == null;
                 Preference pref = findPreference(state.key);
-                Log.i(TAG, "onsettingschange:" + pref.getKey());
                 if (pref == null) return;
-
+                Log.i(TAG, "onsettingschange:" + pref.getKey());
                 pref.setEnabled(enabled);
 
                 if (pref.getKey().equals(SettingsManager.KEY_MANUAL_EXPOSURE)) {
@@ -213,9 +212,11 @@ public class SettingsActivity extends PreferenceActivity {
         ListPreference ZSLPref = (ListPreference) findPreference(SettingsManager.KEY_ZSL);
         List<String> key_zsl = new ArrayList<String>(Arrays.asList("Off", "HAL-ZSL" ));
         List<String> value_zsl = new ArrayList<String>(Arrays.asList( "disable", "hal-zsl"));
+        CaptureModule.CameraMode mode =
+                (CaptureModule.CameraMode) getIntent().getSerializableExtra(CAMERA_MODULE);
 
-        if (ZSLPref != null) {
-            if (!isMFNREnabled()) {
+        if (ZSLPref != null ) {
+            if (!isMFNREnabled() && (mode != CameraMode.SAT && mode != CameraMode.RTB)) {
                 key_zsl.add("APP-ZSL");
                 value_zsl.add("app-zsl");
             }
@@ -312,9 +313,17 @@ public class SettingsActivity extends PreferenceActivity {
                         editor.putString(SettingsManager.KEY_MANUAL_ISO_VALUE, iso);
                         editor.apply();
                     } else {
+                        editor.putString(SettingsManager.KEY_MANUAL_EXPOSURE, "off");
+                        editor.apply();
                         RotateTextToast.makeText(SettingsActivity.this, "Invalid ISO",
                                 Toast.LENGTH_SHORT).show();
                     }
+                }
+            });
+            alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog,int id) {
+                    editor.putString(SettingsManager.KEY_MANUAL_EXPOSURE, "off");
+                    editor.apply();
                 }
             });
             alert.show();
@@ -345,9 +354,17 @@ public class SettingsActivity extends PreferenceActivity {
                         editor.putString(SettingsManager.KEY_MANUAL_EXPOSURE_VALUE, expTime);
                         editor.apply();
                     } else {
+                        editor.putString(SettingsManager.KEY_MANUAL_EXPOSURE, "off");
+                        editor.apply();
                         RotateTextToast.makeText(SettingsActivity.this, "Invalid exposure time",
                                 Toast.LENGTH_SHORT).show();
                     }
+                }
+            });
+            alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog,int id) {
+                    editor.putString(SettingsManager.KEY_MANUAL_EXPOSURE, "off");
+                    editor.apply();
                 }
             });
             alert.show();
@@ -400,9 +417,17 @@ public class SettingsActivity extends PreferenceActivity {
                         editor.putString(SettingsManager.KEY_MANUAL_EXPOSURE_VALUE, expTime);
                         editor.apply();
                     } else {
+                        editor.putString(SettingsManager.KEY_MANUAL_EXPOSURE, "off");
+                        editor.apply();
                         RotateTextToast.makeText(SettingsActivity.this, "Invalid exposure time",
                                 Toast.LENGTH_SHORT).show();
                     }
+                }
+            });
+            alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog,int id) {
+                    editor.putString(SettingsManager.KEY_MANUAL_EXPOSURE, "off");
+                    editor.apply();
                 }
             });
             alert.show();
@@ -442,9 +467,17 @@ public class SettingsActivity extends PreferenceActivity {
                     editor.putFloat(SettingsManager.KEY_MANUAL_GAINS_VALUE, newGain);
                     editor.apply();
                 } else {
+                    editor.putString(SettingsManager.KEY_MANUAL_EXPOSURE, "off");
+                    editor.apply();
                     RotateTextToast.makeText(SettingsActivity.this, "Invalid GAINS",
                             Toast.LENGTH_SHORT).show();
                 }
+            }
+        });
+        alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog,int id) {
+                editor.putString(SettingsManager.KEY_MANUAL_EXPOSURE, "off");
+                editor.apply();
             }
         });
         alert.show();
@@ -615,6 +648,11 @@ public class SettingsActivity extends PreferenceActivity {
                         RotateTextToast.makeText(SettingsActivity.this, "Invalid CCT",
                                 Toast.LENGTH_SHORT).show();
                     }
+                }
+            });
+            alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog,int id) {
+                    dialog.cancel();
                 }
             });
             alert.show();
@@ -936,7 +974,13 @@ public class SettingsActivity extends PreferenceActivity {
         CaptureModule.CameraMode mode =
                 (CaptureModule.CameraMode) getIntent().getSerializableExtra(CAMERA_MODULE);
 
-        if (mSettingsManager.getInitialCameraId() == CaptureModule.FRONT_ID) {
+        final SharedPreferences pref = getSharedPreferences(
+                ComboPreferences.getGlobalSharedPreferencesName(this),Context.MODE_PRIVATE);
+        int isSupportT2T = pref.getInt(
+                SettingsManager.KEY_SUPPORT_T2T_FOCUS, -1);
+
+        if (mSettingsManager.getInitialCameraId() == CaptureModule.FRONT_ID ||
+                (isSupportT2T == SettingsManager.TOUCH_TRACK_FOCUS_DISABLE)) {
             removePreference(SettingsManager.KEY_TOUCH_TRACK_FOCUS, photoPre);
             removePreference(SettingsManager.KEY_TOUCH_TRACK_FOCUS, videoPre);
         }
@@ -964,9 +1008,6 @@ public class SettingsActivity extends PreferenceActivity {
                     }
                     videoAddList.addAll(videoOnlyList);
                     videoAddList.add(SettingsManager.KEY_ANTI_BANDING_LEVEL);
-                    if (mSettingsManager.getInitialCameraId() == CaptureModule.FRONT_ID) {
-                        videoAddList.remove(SettingsManager.KEY_EIS_VALUE);
-                    }
                     if (mode == VIDEO) {
                         videoAddList.add(SettingsManager.KEY_BSGC_DETECTION);
                         videoAddList.add(SettingsManager.KEY_FACE_DETECTION_MODE);

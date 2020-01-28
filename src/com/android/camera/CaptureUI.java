@@ -700,6 +700,9 @@ public class CaptureUI implements FocusOverlayManager.FocusUI,
     }
 
     public void showZoomSeekBar() {
+        if(mFilterMenuStatus == FILTER_MENU_ON){
+            return;
+        }
         if (mZoomLinearLayout != null) {
             mZoomLinearLayout.setVisibility(View.VISIBLE);
         }
@@ -1577,6 +1580,7 @@ public class CaptureUI implements FocusOverlayManager.FocusUI,
     public void showUIAfterCountDown() {
         hideCameraControls(false);
         mGestures.setZoomOnly(false);
+        updateMenus();
     }
 
     public void hideCameraControls(boolean hide) {

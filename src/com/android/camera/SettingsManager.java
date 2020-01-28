@@ -96,6 +96,9 @@ public class SettingsManager implements ListMenu.SettingsListener {
     public static final int RESOURCE_TYPE_THUMBNAIL = 0;
     public static final int RESOURCE_TYPE_LARGEICON = 1;
 
+    public static final int TOUCH_TRACK_FOCUS_DISABLE = 0;
+    public static final int TOUCH_TRACK_FOCUS_ENABLE = 1;
+
     public static final int SCENE_MODE_AUTO_INT = 0;
     public static final int SCENE_MODE_NIGHT_INT = 5;
     public static final int SCENE_MODE_HDR_INT = 18;
@@ -168,6 +171,7 @@ public class SettingsManager implements ListMenu.SettingsListener {
     public static final String KEY_SELFIE_FLASH = "pref_selfie_flash_key";
     public static final String KEY_SHUTTER_SOUND = "pref_camera2_shutter_sound_key";
     public static final String KEY_TOUCH_TRACK_FOCUS = "pref_camera2_touch_track_focus_key";
+    public static final String KEY_SUPPORT_T2T_FOCUS = "pref_camera2_support_t2t_focus_key";
     public static final String KEY_DEVELOPER_MENU = "pref_camera2_developer_menu_key";
     public static final String KEY_RESTORE_DEFAULT = "pref_camera2_restore_default_key";
     public static final String KEY_FOCUS_DISTANCE = "pref_camera2_focus_distance_key";
@@ -561,6 +565,7 @@ public class SettingsManager implements ListMenu.SettingsListener {
                 CaptureModule.CURRENT_MODE == CaptureModule.CameraMode.VIDEO){
             return true;
         }
+
         boolean isCameraFDSupported = false;
         isCameraFDSupported = PersistUtil.isCameraFDSupported();
         try {
@@ -568,7 +573,12 @@ public class SettingsManager implements ListMenu.SettingsListener {
                     mCharacteristics.get(mCameraId).get(CaptureModule.is_camera_fd_supported) == 1;
         } catch (IllegalArgumentException e){
             Log.d(TAG,"isVideoFDSupported no vendor tag");
-            isCameraFDSupported = true;
+            if (CaptureModule.CURRENT_MODE == CaptureModule.CameraMode.RTB ||
+            CaptureModule.CURRENT_MODE == CaptureModule.CameraMode.SAT){
+                isCameraFDSupported = false;
+            } else {
+                isCameraFDSupported = true;
+            }
         }
         return isCameraFDSupported;
     }
@@ -834,7 +844,8 @@ public class SettingsManager implements ListMenu.SettingsListener {
     }
 
     public String getCurrentPrepNameKey() {
-        return String.valueOf(mCameraId) + String.valueOf(CaptureModule.CURRENT_MODE);
+        String facing = mPreferences.getGlobal().getString(KEY_FRONT_REAR_SWITCHER_VALUE, "rear");
+        return facing + String.valueOf(CaptureModule.CURRENT_MODE);
     }
 
     public String getValue(String key) {
@@ -1642,10 +1653,6 @@ public class SettingsManager implements ListMenu.SettingsListener {
                                 rate = String.valueOf(r.getUpper());
                                 supported.add("hfr" + rate);
                                 supported.add("hsr" + rate);
-                                if (PersistUtil.isSSMEnabled() && !above1080p) {
-                                    supported.add("2x_" + rate);
-                                    supported.add("4x_" + rate);
-                                }
                             }
                         }
                     }
@@ -1664,10 +1671,6 @@ public class SettingsManager implements ListMenu.SettingsListener {
                                     videoSize.getWidth(), videoSize.getHeight(), mExtendedHFRSize[i + 2])) {
                                 supported.add(item);
                                 supported.add("hsr" + mExtendedHFRSize[i + 2]);
-                                if (PersistUtil.isSSMEnabled() && !above1080p) {
-                                    supported.add("2x_" + mExtendedHFRSize[i + 2]);
-                                    supported.add("4x_" + mExtendedHFRSize[i + 2]);
-                                }
                             }
                         }
                     }
@@ -1930,7 +1933,18 @@ public class SettingsManager implements ListMenu.SettingsListener {
     public Size[] getSupportedOutputSize(int cameraId, Class cl) {
         StreamConfigurationMap map = mCharacteristics.get(cameraId).get(
                 CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-        return map.getOutputSizes(cl);
+        Size[] normal = map.getOutputSizes(cl);
+        Size[] high = map.getHighResolutionOutputSizes(ImageFormat.PRIVATE);
+        Size[] ret = new Size[normal.length+high.length];
+        System.arraycopy(normal,0,ret,0,normal.length);
+        System.arraycopy(high,0,ret,normal.length,high.length);
+        return ret;
+    }
+
+    public Size[] getHighResolutionOutputSize(int cameraId){
+        StreamConfigurationMap map = mCharacteristics.get(cameraId).get(
+                CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+        return map.getHighResolutionOutputSizes(ImageFormat.JPEG);
     }
 
     private List<String> getSupportedVideoDuration() {
@@ -2616,6 +2630,9 @@ public class SettingsManager implements ListMenu.SettingsListener {
     }
 
     public boolean isLiveshotSupported(Size videoSize, int fps){
+        if( CaptureModule.CURRENT_MODE == CaptureModule.CameraMode.HFR){
+            return false;
+        }
         if (PersistUtil.isPersistVideoLiveshot())
             return true;
         SettingsManager.VideoEisConfig config =
@@ -2635,6 +2652,16 @@ public class SettingsManager implements ListMenu.SettingsListener {
             return config.isEISSupported();
         }
         return true;
+    }
+
+    public int getVideoPreviewFPS(Size videoSize,int fps) {
+        int previewFPS = 60;
+        SettingsManager.VideoEisConfig config =
+                getVideoEisConfig(videoSize,fps);
+        if (config != null)
+            previewFPS = config.getMaxPreviewFPS();
+        Log.d(TAG,"videoSize="+videoSize.toString()+" fps="+fps+ " previewFPS="+previewFPS);
+        return previewFPS;
     }
 
     public int getVideoFPS(){
