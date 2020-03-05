@@ -76,7 +76,6 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.ParcelFileDescriptor;
 import android.os.SystemClock;
-import android.os.SystemProperties;
 import android.os.Trace;
 import android.provider.MediaStore;
 import android.util.Log;
@@ -950,10 +949,12 @@ public class CaptureModule implements CameraModule, PhotoController,
                 Face[] faces = partialResult.get(CaptureResult.STATISTICS_FACES);
                 if (BSGC_DEBUG)
                     Log.d(BSGC_TAG,"onCaptureProgressed Detected Face size = " + Integer.toString(faces == null? 0 : faces.length));
-                if (faces != null && (isBsgcDetecionOn() || isFacialContourOn() || isFacePointOn())) {
-                    updateFaceView(faces, getBsgcInfo(partialResult, faces.length));
-                } else {
-                    updateFaceView(faces, null);
+                if (faces != null && mSettingsManager.isFDRenderingAtPreview()){
+                    if (isBsgcDetecionOn() || isFacialContourOn() || isFacePointOn()){
+                        updateFaceView(faces, getBsgcInfo(partialResult, faces.length));
+                    } else {
+                        updateFaceView(faces, null);
+                    }
                 }
             }
         }
@@ -970,10 +971,12 @@ public class CaptureModule implements CameraModule, PhotoController,
                 Face[] faces = result.get(CaptureResult.STATISTICS_FACES);
                 if (BSGC_DEBUG)
                     Log.d(BSGC_TAG,"onCaptureCompleted Detected Face size = " + Integer.toString(faces == null? 0 : faces.length));
-                if (faces != null && (isBsgcDetecionOn() || isFacialContourOn() || isFacePointOn())) {
-                    updateFaceView(faces, getBsgcInfo(result, faces.length));
-                } else {
-                    updateFaceView(faces, null);
+                if (faces != null && mSettingsManager.isFDRenderingAtPreview()){
+                    if (isBsgcDetecionOn() || isFacialContourOn() || isFacePointOn()){
+                        updateFaceView(faces, getBsgcInfo(result, faces.length));
+                    } else {
+                        updateFaceView(faces, null);
+                    }
                 }
                 updateT2tTrackerView(result);
             }
@@ -3041,25 +3044,16 @@ public class CaptureModule implements CameraModule, PhotoController,
 
     private int calculateMaxFps(){
         int maxFps = mSettingsManager.getmaxBurstShotFPS();
-        double dp = 1000000.00;
         if(maxFps > 0) {
-            double size = mPictureSize.getWidth() * mPictureSize.getHeight() /dp;
-            double maxsizefloat = mSupportedMaxPictureSize.getWidth() * mSupportedMaxPictureSize.getHeight()/dp;
-            double maxSize = Math.ceil(maxsizefloat);
-            int sizemid = (int)(maxSize*3/4);
-            int sizemin = (int)(maxSize/2);
+            double size = mPictureSize.getWidth() * mPictureSize.getHeight();
+            double maxsizefloat = mSupportedMaxPictureSize.getWidth() * mSupportedMaxPictureSize.getHeight();
+            maxFps = (int)Math.round((maxsizefloat * maxFps) / size);
             if (DEBUG) {
-                Log.i(TAG, "maxsize:" + mSupportedMaxPictureSize.getWidth() + ",height:" + mSupportedMaxPictureSize.getHeight() + "maxsize:" + maxSize);
+                Log.i(TAG, "maxsize:" + mSupportedMaxPictureSize.getWidth() + ",height:" + mSupportedMaxPictureSize.getHeight() + "maxsize:" + maxsizefloat);
                 Log.i(TAG, "size:" + mPictureSize.getWidth() + ",height:" + mPictureSize.getHeight() + ",size:" + size);
-                Log.i(TAG, "sizemid:" + sizemid + ",sizemin:" + sizemin );
+                Log.i(TAG,"maxFps:" + maxFps);
             }
-            if(size > sizemid && size <= maxSize){
-                maxFps = 2;
-            }else if(size > sizemin && size <= sizemid){
-                maxFps = 3;
-            }else if (size <= sizemin) {
-                maxFps = 4;
-            }
+            maxFps = maxFps > 30 ? 30 : maxFps;
         }
         return maxFps;
     }
@@ -4150,7 +4144,6 @@ public class CaptureModule implements CameraModule, PhotoController,
         }
         mLongshotActive = false;
         updatePreviewSurfaceReadyState(false);
-        updateMFNRText();
     }
 
     private void cancelTouchFocus() {
@@ -4427,6 +4420,7 @@ public class CaptureModule implements CameraModule, PhotoController,
         if (Integer.parseInt(scene) != SettingsManager.SCENE_MODE_UBIFOCUS_INT) {
             setRefocusLastTaken(false);
         }
+        updateMFNRText();//this must before showRelatedIcons, color filter based on mfnr
         mUI.showRelatedIcons(mCurrentSceneMode.mode);
         if(isPanoSetting(scene)) {
             if (mIntentMode != CaptureModule.INTENT_MODE_NORMAL) {
@@ -5149,10 +5143,6 @@ public class CaptureModule implements CameraModule, PhotoController,
         Size[] prevSizes = mSettingsManager.getSupportedOutputSize(getMainCameraId(),
                 MediaRecorder.class);
         mVideoPreviewSize = getOptimalVideoPreviewSize(mVideoSize, prevSizes);
-        int[] maxPreviewSize = mSettingsManager.getMaxPreviewSize();
-        if (maxPreviewSize != null) {
-            mVideoPreviewSize = new Size(maxPreviewSize[0], maxPreviewSize[1]);
-        }
         Point previewSize = PersistUtil.getCameraPreviewSize();
         if (previewSize != null) {
             mVideoPreviewSize = new Size(previewSize.x, previewSize.y);
@@ -5992,16 +5982,21 @@ public class CaptureModule implements CameraModule, PhotoController,
                     } catch (IllegalArgumentException illegalArgumentException) {
                         Log.w(TAG, "can not find vendor tag: org.quic.camera.recording.endOfStream");
                     }
-                    if (mCurrentSession instanceof CameraConstrainedHighSpeedCaptureSession) {
-                        List requestList = CameraUtil.createHighSpeedRequestList(
-                                mVideoRecordRequestBuilder.build());
-                        mCurrentSession.captureBurst(requestList, mCaptureCallback, mCameraHandler);
-                    } else if (isSSMEnabled()) {
-                        mCurrentSession.captureBurst(createSSMBatchRequest(mVideoRecordRequestBuilder),
-                                mCaptureCallback, mCameraHandler);
-                    } else {
-                        mCurrentSession.capture(mVideoRecordRequestBuilder.build(), mCaptureCallback,
-                                mCameraHandler);
+                    try {
+                        if (mCurrentSession instanceof CameraConstrainedHighSpeedCaptureSession) {
+                            List requestList = CameraUtil.createHighSpeedRequestList(
+                                    mVideoRecordRequestBuilder.build());
+                            mCurrentSession.captureBurst(requestList, mCaptureCallback, mCameraHandler);
+                        } else if (isSSMEnabled()) {
+                            mCurrentSession.captureBurst(createSSMBatchRequest(mVideoRecordRequestBuilder),
+                                    mCaptureCallback, mCameraHandler);
+                        } else {
+                            mCurrentSession.capture(mVideoRecordRequestBuilder.build(), mCaptureCallback,
+                                    mCameraHandler);
+                        }
+                    } catch (UnsupportedOperationException exception) {
+                        Log.w(TAG, " UnsupportedOperationException ");
+                        exception.printStackTrace();
                     }
                     Log.d(TAG, "Set endofstream TAG is done from APP");
                 }
@@ -6109,7 +6104,7 @@ public class CaptureModule implements CameraModule, PhotoController,
             try {
                 mCurrentSession.abortCaptures();
                 Log.d(TAG, "stopRecordingVideo call abortCaptures ");
-            } catch (CameraAccessException e) {
+            } catch (CameraAccessException|IllegalStateException e) {
                 e.printStackTrace();
             }
         }
@@ -6181,7 +6176,7 @@ public class CaptureModule implements CameraModule, PhotoController,
                 mCurrentSession.capture(mVideoRecordRequestBuilder.build(), mCaptureCallback,
                         mCameraHandler);
             }
-        } catch (CameraAccessException e) {
+        } catch (CameraAccessException | IllegalStateException e) {
             e.printStackTrace();
         }
         //if have this, video switch to photo, photo will have no preview
@@ -8089,7 +8084,9 @@ public class CaptureModule implements CameraModule, PhotoController,
         mActivity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if (value == null || value.equals("off")) mUI.onStopFaceDetection();
+                if (value == null || value.equals("off")
+                        || !mSettingsManager.isFDRenderingAtPreview())
+                    mUI.onStopFaceDetection();
                 else {
                     mUI.onStartFaceDetection(mDisplayOrientation,
                             mSettingsManager.isFacingFront(getMainCameraId()),
