@@ -1121,7 +1121,7 @@ public class CaptureUI implements FocusOverlayManager.FocusUI,
             mVideoButton.setImageResource(R.drawable.video_stop);
             mRecordingTimeView.setText("00:00");
             mRecordingTimeRect.setVisibility(View.VISIBLE);
-            mMuteButton.setVisibility(mModule.isHSRMode() ? View.VISIBLE : View.INVISIBLE);
+            mMuteButton.setVisibility((mModule.isHSRMode() || mModule.getCurrenCameraMode() == CaptureModule.CameraMode.VIDEO) ? View.VISIBLE : View.INVISIBLE);
             setMuteButtonResource(!mModule.isAudioMute());
         } else {
             mFlashButton.setVisibility(View.VISIBLE);
@@ -2251,7 +2251,7 @@ public class CaptureUI implements FocusOverlayManager.FocusUI,
     }
 
     public void showSurfaceView() {
-        Log.d(TAG, "showSurfaceView");
+        Log.d(TAG, "showSurfaceView" + mPreviewWidth+" "+mPreviewHeight);
         mSurfaceView.getHolder().setFixedSize(mPreviewWidth, mPreviewHeight);
         mSurfaceView.setAspectRatio(mPreviewHeight, mPreviewWidth);
         mSurfaceView.setVisibility(View.VISIBLE);

@@ -551,7 +551,7 @@ public class SettingsManager implements ListMenu.SettingsListener {
     }
 
     public boolean isBurstShotSupported(){
-        boolean isBurstShotSupported = false;
+        boolean isBurstShotSupported = true;
         try {
             isBurstShotSupported = mCharacteristics.get(mCameraId).get(CaptureModule.is_burstshot_supported) == 1 ? true : false;
         } catch (IllegalArgumentException e) {
@@ -569,6 +569,18 @@ public class SettingsManager implements ListMenu.SettingsListener {
             isFDRenderingInUI = isCameraFDSupported();
         }
         return isFDRenderingInUI;
+    }
+
+    public boolean isT2TSupported() {
+        boolean supportted = true;
+        try {
+            supportted =
+                    (mCharacteristics.get(mCameraId).get(CaptureModule.is_t2t_supported) == 1);
+        } catch (IllegalArgumentException e) {
+            Log.d(TAG, "isT2TSupported no vendor tag");
+            supportted = true;
+        }
+        return supportted;
     }
 
     public boolean isCameraFDSupported(){

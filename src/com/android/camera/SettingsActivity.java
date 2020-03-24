@@ -89,6 +89,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Arrays;
 
+import static com.android.camera.CaptureModule.CameraMode.RTB;
+import static com.android.camera.CaptureModule.CameraMode.SAT;
 import static com.android.camera.CaptureModule.CameraMode.VIDEO;
 
 public class SettingsActivity extends PreferenceActivity {
@@ -235,18 +237,31 @@ public class SettingsActivity extends PreferenceActivity {
         ListPreference ZSLPref = (ListPreference) findPreference(SettingsManager.KEY_ZSL);
         ListPreference mfnrPref = (ListPreference) findPreference(SettingsManager.KEY_CAPTURE_MFNR_VALUE);
         SwitchPreference selfiePref = (SwitchPreference) findPreference(SettingsManager.KEY_SELFIEMIRROR);
-        if (formatPref == null || ZSLPref ==null) {
+        if (formatPref == null)
             return;
-        }
-        if("app-zsl".equals(ZSLPref.getValue()) ||
-                (selfiePref != null && selfiePref.isChecked())){
+
+        String sceneMode = mSettingsManager.getValue(SettingsManager.KEY_SCENE_MODE);
+        CaptureModule.CameraMode mode =
+                (CaptureModule.CameraMode) getIntent().getSerializableExtra(CAMERA_MODULE);
+        if((ZSLPref != null && "app-zsl".equals(ZSLPref.getValue())) ||
+                (sceneMode != null && Integer.valueOf(sceneMode) == SettingsManager.SCENE_MODE_HDR_INT) ||
+                (selfiePref != null && selfiePref.isChecked()) ||
+                (mode != null && (mode == SAT || mode == RTB))){
             formatPref.setValue("0");
             formatPref.setEnabled(false);
+        } else {
+            formatPref.setEnabled(true);
+        }
+
+        if (mfnrPref == null)
+            return;
+
+        if((ZSLPref != null &&"app-zsl".equals(ZSLPref.getValue())) ||
+                (selfiePref != null && selfiePref.isChecked())){
             if (mfnrPref != null) {
                 mfnrPref.setEnabled(false);
             }
         } else {
-            formatPref.setEnabled(true);
             if (mfnrPref != null) {
                 mfnrPref.setEnabled(true);
             }
@@ -978,9 +993,10 @@ public class SettingsActivity extends PreferenceActivity {
                 ComboPreferences.getGlobalSharedPreferencesName(this),Context.MODE_PRIVATE);
         int isSupportT2T = pref.getInt(
                 SettingsManager.KEY_SUPPORT_T2T_FOCUS, -1);
+        boolean isSupportedT2T = mSettingsManager.isT2TSupported();
 
         if (mSettingsManager.getInitialCameraId() == CaptureModule.FRONT_ID ||
-                (isSupportT2T == SettingsManager.TOUCH_TRACK_FOCUS_DISABLE)) {
+                (isSupportT2T == SettingsManager.TOUCH_TRACK_FOCUS_DISABLE) || !isSupportedT2T) {
             removePreference(SettingsManager.KEY_TOUCH_TRACK_FOCUS, photoPre);
             removePreference(SettingsManager.KEY_TOUCH_TRACK_FOCUS, videoPre);
         }
@@ -1110,6 +1126,7 @@ public class SettingsActivity extends PreferenceActivity {
         updateMultiPreference(SettingsManager.KEY_STATS_VISUALIZER_VALUE);
         updatePictureSizePreferenceButton();
         updateVideoHDRPreference();
+        updateZslPreference();
         updateFormatPreference();
         updateEISPreference();
         updateStoragePreference();
@@ -1167,7 +1184,6 @@ public class SettingsActivity extends PreferenceActivity {
         } catch (PackageManager.NameNotFoundException e) {
             e.printStackTrace();
         }
-        updateZslPreference();
     }
 
     private void updateStoragePreference() {
@@ -1193,15 +1209,12 @@ public class SettingsActivity extends PreferenceActivity {
     private void updatePreferenceButton(String key) {
         Preference pref =  findPreference(key);
         if (pref != null ) {
+            pref.setEnabled(false);
             if( pref instanceof ListPreference) {
                 ListPreference pref2 = (ListPreference) pref;
-                if (pref2.getEntryValues().length == 1) {
-                    pref2.setEnabled(false);
-                } else {
-                    pref2.setEnabled(true);
+                if (pref2.getEntryValues().length > 1) {
+                    updatePreference(key);
                 }
-            }else {
-                pref.setEnabled(false);
             }
         }
     }
