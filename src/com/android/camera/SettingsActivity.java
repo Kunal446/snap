@@ -164,7 +164,7 @@ public class SettingsActivity extends PreferenceActivity {
                 boolean enabled = values.overriddenValue == null;
                 Preference pref = findPreference(state.key);
                 if (pref == null) return;
-                Log.i(TAG, "onsettingschange:" + pref.getKey());
+                Log.i(TAG, "onsettingschange:" + pref.getKey() + ",enabled:" + enabled);
                 pref.setEnabled(enabled);
 
                 if (pref.getKey().equals(SettingsManager.KEY_MANUAL_EXPOSURE)) {
@@ -199,6 +199,13 @@ public class SettingsActivity extends PreferenceActivity {
                 if(pref.getKey().equals(SettingsManager.KEY_VIDEO_QUALITY) ||
                    pref.getKey().equals(SettingsManager.KEY_VIDEO_HIGH_FRAME_RATE)){
                     updateEISPreference();
+                }
+                if(pref.getKey().equals(SettingsManager.KEY_RAW_FORMAT_TYPE) ||
+                   pref.getKey().equals(SettingsManager.KEY_RAWINFO_TYPE)){
+                    if(mSettingsManager.getValue(SettingsManager.KEY_SAVERAW).equals("disable")){
+                        pref.setEnabled(false);
+                    }
+                    updatePreference(pref.getKey());
                 }
             }
         }
@@ -1007,7 +1014,9 @@ public class SettingsActivity extends PreferenceActivity {
                 add(SettingsManager.KEY_SATURATION_LEVEL);
                 add(SettingsManager.KEY_ANTI_BANDING_LEVEL);
                 add(SettingsManager.KEY_STATS_VISUALIZER_VALUE);
-//                add(SettingsManager.KEY_SAVERAW);
+                add(SettingsManager.KEY_SAVERAW);
+                add(SettingsManager.KEY_RAW_FORMAT_TYPE);
+                add(SettingsManager.KEY_RAWINFO_TYPE);
                 add(SettingsManager.KEY_AUTO_HDR);
                 add(SettingsManager.KEY_MANUAL_EXPOSURE);
                 add(SettingsManager.KEY_SHARPNESS_CONTROL_MODE);
@@ -1061,6 +1070,8 @@ public class SettingsActivity extends PreferenceActivity {
                     for (String removeKey : videoOnlyList) {
                         removePreference(removeKey, developer);
                     }
+                    removePreference(SettingsManager.KEY_RAW_FORMAT_TYPE, developer);
+                    removePreference(SettingsManager.KEY_RAWINFO_TYPE, developer);
                 }
                 break;
             case VIDEO:

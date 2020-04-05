@@ -173,7 +173,8 @@
   {
     "enable":{"pref_camera2_longshot_key":"off",
               "pref_camera2_capture_mfnr_key":"0"},
-    "disable":{}
+    "disable":{"pref_camera2_raw_format_key":"disable",
+              "pref_camera2_rawinfo_type_key":"disable"}
   },
   "pref_camera2_hfr_key":
   {
