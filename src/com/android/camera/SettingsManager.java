@@ -189,6 +189,8 @@ public class SettingsManager implements ListMenu.SettingsListener {
     public static final String KEY_SHARPNESS_CONTROL_MODE = "pref_camera2_sharpness_control_key";
     public static final String KEY_AF_MODE = "pref_camera2_afmode_key";
     public static final String KEY_EXPOSURE_METERING_MODE = "pref_camera2_exposure_metering_key";
+    public static final String KEY_MULTI_CAMERAS_MODE = "pref_camera2_multi_cameras_key";
+
 
     //manual 3A keys and parameter strings
     public static final String KEY_MANUAL_EXPOSURE = "pref_camera2_manual_exp_key";
@@ -236,6 +238,7 @@ public class SettingsManager implements ListMenu.SettingsListener {
     private static final String TAG = "SnapCam_SettingsManager";
 
     private static SettingsManager sInstance;
+    private CaptureModule mCaptureModule;
     private ArrayList<CameraCharacteristics> mCharacteristics;
     private ArrayList<Listener> mListeners;
     private Map<String, Values> mValuesMap;
@@ -349,6 +352,16 @@ public class SettingsManager implements ListMenu.SettingsListener {
 
     public static SettingsManager getInstance() {
         return sInstance;
+    }
+
+    public void createCaptureModule(CaptureModule captureModule){
+        mCaptureModule = captureModule;
+    }
+
+    public void destroyCaptureModule(){
+        if (mCaptureModule != null) {
+            mCaptureModule = null;
+        }
     }
 
     public void destroyInstance() {
@@ -1045,6 +1058,7 @@ public class SettingsManager implements ListMenu.SettingsListener {
         ListPreference zoom = mPreferenceGroup.findPreference(KEY_ZOOM);
         ListPreference qcfa = mPreferenceGroup.findPreference(KEY_QCFA);
         ListPreference bsgc = mPreferenceGroup.findPreference(KEY_BSGC_DETECTION);
+        ListPreference pictureFormat = mPreferenceGroup.findPreference(KEY_PICTURE_FORMAT);
         ListPreference faceDetectionMode = mPreferenceGroup.findPreference(KEY_FACE_DETECTION_MODE);
         ListPreference fsMode = mPreferenceGroup.findPreference(KEY_SENSOR_MODE_FS2_VALUE);
 
@@ -1244,6 +1258,13 @@ public class SettingsManager implements ListMenu.SettingsListener {
             if (filterUnsupportedOptions(zoom,
                     getSupportedZoomLevel(cameraId))) {
                 mFilteredKeys.add(zoom.getKey());
+            }
+        }
+
+        if (pictureFormat != null){
+            if (filterUnsupportedOptions(pictureFormat,
+                    getSupportedPictureFormat(cameraId))){
+                mFilteredKeys.add(pictureSize.getKey());
             }
         }
 
@@ -2345,6 +2366,7 @@ public class SettingsManager implements ListMenu.SettingsListener {
         return  modes;
     }
 
+
     public List<String> getSupportedAntiBandingLevelAvailableModes(int cameraId) {
         int[] antiBandingLevelAvailableModes = mCharacteristics.get(cameraId).get(
                 CameraCharacteristics.CONTROL_AE_AVAILABLE_ANTIBANDING_MODES);
@@ -2394,6 +2416,30 @@ public class SettingsManager implements ListMenu.SettingsListener {
     public boolean isHeifHALEncoding() {
         //HAL encoding by default on Android Q
         return getSavePictureFormat() == HEIF_FORMAT;
+    }
+
+    public List<String> getSupportedPictureFormat(int cameraId) {
+        byte supportHeic = 1;
+        try {
+            supportHeic = mCharacteristics.get(cameraId).get(CaptureModule.heic_support_enable);
+        } catch (Exception e) {
+        }
+
+        ArrayList<String> ret = new ArrayList<String>();
+        ret.add(String.valueOf(SettingsManager.JPEG_FORMAT));
+        if (supportHeic == 1) {
+            ret.add(String.valueOf(SettingsManager.HEIF_FORMAT));
+        }
+        return ret;
+    }
+
+    public boolean isSATCamera(int cameraId){
+        try{
+            int type = mCharacteristics.get(cameraId).get(CaptureModule.logical_camera_type);
+            return type == CaptureModule.TYPE_SAT;
+        }catch (Exception e){
+        }
+        return false;
     }
 
     public boolean isZSLInHALEnabled(){
@@ -2492,18 +2538,13 @@ public class SettingsManager implements ListMenu.SettingsListener {
 
     public List<String> getDependentKeys(String key) {
         List<String> list = null;
-        if (key.equals(KEY_VIDEO_QUALITY)) {
+        String value = getValue(key);
+        JSONObject dependencies = getDependencyList(key, value);
+        if (dependencies != null) {
             list = new ArrayList<>();
-            list.add(KEY_VIDEO_HIGH_FRAME_RATE);
-        } else {
-            String value = getValue(key);
-            JSONObject dependencies = getDependencyList(key, value);
-            if (dependencies != null) {
-                list = new ArrayList<>();
-                Iterator<String> it = dependencies.keys();
-                while (it.hasNext()) {
-                    list.add(it.next());
-                }
+            Iterator<String> it = dependencies.keys();
+            while (it.hasNext()) {
+                list.add(it.next());
             }
         }
         return list;
@@ -2563,6 +2604,9 @@ public class SettingsManager implements ListMenu.SettingsListener {
 
     public void restoreSettings() {
         clearPerCameraPreferences();
+        mValuesMap.clear();
+        if(mValuesMap != null) mValuesMap = null;
+        mCaptureModule.restoreCameraIds();
         init();
     }
 

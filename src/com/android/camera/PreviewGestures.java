@@ -25,6 +25,7 @@ import com.android.camera.ui.PieRenderer;
 import com.android.camera.ui.RenderOverlay;
 import com.android.camera.ui.TrackingFocusRenderer;
 import com.android.camera.ui.ZoomRenderer;
+import com.android.camera.multi.MultiCameraUI;
 
 /* PreviewGestures disambiguates touch events received on RenderOverlay
  * and dispatch them to the proper recipient (i.e. zoom renderer or pie renderer).
@@ -57,6 +58,7 @@ public class PreviewGestures
     private boolean mZoomOnly;
     private GestureDetector mGestureDetector;
     private CaptureUI mCaptureUI;
+    private MultiCameraUI mMultiCameraUI;
     private PhotoMenu mPhotoMenu;
     private VideoMenu mVideoMenu;
     private boolean waitUntilNextDown;
@@ -91,32 +93,37 @@ public class PreviewGestures
 
             int deltaX = (int) (e1.getX() - e2.getX());
             int deltaY = (int) (e1.getY() - e2.getY());
-
-            int orientation = 0;
-            if (mCaptureUI != null)
-                orientation = mCaptureUI.getOrientation();
-
-            if (isLeftSwipe(orientation, deltaX, deltaY)) {
-                waitUntilNextDown = true;
+            if((Math.abs(deltaX) > 40 || Math.abs(deltaY) > 40) && Math.abs(e1.getY()) < 1800) {
+                int orientation = 0;
                 if (mCaptureUI != null)
-                    mCaptureUI.swipeCameraMode(-1);
-                return true;
-            }
-            if (isRightSwipe(orientation, deltaX, deltaY)) {
-                waitUntilNextDown = true;
-                if (mCaptureUI != null)
-                    mCaptureUI.swipeCameraMode(1);
-                return true;
-            }
-            if (isUpSwipe(orientation, deltaX, deltaY) ||
-                    isDownSwipe(orientation, deltaX, deltaY)) {
-                if (e1.getY() < 200) {
-                    return false;
+                    orientation = mCaptureUI.getOrientation();
+
+                if (isLeftSwipe(orientation, deltaX, deltaY)) {
+                    waitUntilNextDown = true;
+                    if (mCaptureUI != null)
+                        mCaptureUI.swipeCameraMode(-1);
+                    if (mMultiCameraUI != null)
+                        mMultiCameraUI.swipeCameraMode(-1);
+                    return true;
                 }
-                waitUntilNextDown = true;
-                if (mCaptureUI != null)
-                    mCaptureUI.switchFrontBackCamera();
-                return true;
+                if (isRightSwipe(orientation, deltaX, deltaY)) {
+                    waitUntilNextDown = true;
+                    if (mCaptureUI != null)
+                        mCaptureUI.swipeCameraMode(1);
+                    if (mMultiCameraUI != null)
+                        mMultiCameraUI.swipeCameraMode(1);
+                    return true;
+                }
+                if (isUpSwipe(orientation, deltaX, deltaY) ||
+                        isDownSwipe(orientation, deltaX, deltaY)) {
+                    if (e1.getY() < 200) {
+                        return false;
+                    }
+                    waitUntilNextDown = true;
+                    if (mCaptureUI != null)
+                        mCaptureUI.switchFrontBackCamera();
+                    return true;
+                }
             }
             return false;
         }
@@ -216,6 +223,12 @@ public class PreviewGestures
 
     public void setCaptureUI(CaptureUI ui) {
         mCaptureUI = ui;
+    }
+
+    public void setMultiCameraUI(MultiCameraUI ui) {
+        if (mMultiCameraUI == null) {
+            mMultiCameraUI = ui;
+        }
     }
 
     public void setPhotoMenu(PhotoMenu menu) {
