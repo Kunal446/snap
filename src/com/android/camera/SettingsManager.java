@@ -52,6 +52,7 @@ import android.util.Rational;
 import android.util.Size;
 import android.media.EncoderCapabilities;
 import android.media.EncoderCapabilities.VideoEncoderCap;
+import android.widget.Toast;
 
 import com.android.camera.app.CameraApp;
 import com.android.camera.imageprocessor.filter.BestpictureFilter;
@@ -254,6 +255,7 @@ public class SettingsManager implements ListMenu.SettingsListener {
     private int[] mExtendedHFRSize;//An array of pairs (fps, maxW, maxH)
     private int mDeviceSocId = -1;
     private ArrayList<String> mPrepNameKeys;
+    public ArrayList<CharSequence>  backFacingPhysicalCameras = new ArrayList<>();
 
     private static Map<String, Set<String>> VIDEO_ENCODER_PROFILE_TABLE = new HashMap<>();
 
@@ -1322,6 +1324,7 @@ public class SettingsManager implements ListMenu.SettingsListener {
         int numOfCameras = mCharacteristics.size();
         CharSequence[] fullEntryValues = new CharSequence[numOfCameras + 1];
         CharSequence[] fullEntries = new CharSequence[numOfCameras + 1];
+        backFacingPhysicalCameras = new ArrayList<>();
         for(int i = 0; i < numOfCameras ; i++) {
             int facing = mCharacteristics.get(i).get(CameraCharacteristics.LENS_FACING);
             String cameraIdString = "camera " + i +" facing:" +
@@ -1350,7 +1353,12 @@ public class SettingsManager implements ListMenu.SettingsListener {
             }
             fullEntries[i] = cameraIdString;
             fullEntryValues[i] = "" + i;
-            Log.d(TAG,"add "+fullEntries[i]+"="+ fullEntryValues[i]);
+            Log.d(TAG, "add "+fullEntries[i]+"="+ fullEntryValues[i]);
+            if(PersistUtil.getCameraPIP()) {
+                if (cameraIdString.contains("Default")) {
+                    backFacingPhysicalCameras.add("" + i);
+                }
+            }
         }
         fullEntries[numOfCameras] = "disable";
         fullEntryValues[numOfCameras] = "" + -1;

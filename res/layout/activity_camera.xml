@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+		/*
+     *Copyright (c) 2020, The Linux Foundation. All rights reserved.
+
+     *Redistribution and use in source and binary forms, with or without
+     *modification, are permitted provided that the following conditions are
+     *met:
+         * Redistributions of source code must retain the above copyright
+           notice, this list of conditions and the following disclaimer.
+         * Redistributions in binary form must reproduce the above
+           copyright notice, this list of conditions and the following
+           disclaimer in the documentation and/or other materials provided
+           with the distribution.
+         * Neither the name of The Linux Foundation nor the names of its
+           contributors may be used to endorse or promote products derived
+           from this software without specific prior written permission.
+
+    *THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
+    *WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+    *MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
+    *ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
+    *BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+    *CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+    *SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+    *BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+    *WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+    *OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+    *IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+     */
+-->
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_gravity="center">
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000"
+    tools:context="com.android.camera.MainActivity" >
+    <com.android.camera.ui.CameraRootView
+        android:id="@+id/camera_photo_root"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center_vertical|center_horizontal" >
+    </com.android.camera.ui.CameraRootView>
+
+<!--<com.android.camera.ui.Camera2FaceView
+        android:id="@+id/overlay_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:elevation="5dp"/>-->
+
+
+
+
+        <Button
+            android:id="@+id/Photo"
+            android:layout_width="210dp"
+            android:layout_height="30dp"
+            android:layout_marginTop="680dp"
+            android:layout_marginLeft="0dip"
+            android:layout_gravity="left"
+
+
+            android:background="@android:color/white"
+            android:clickable="true"
+            android:text="Photo"
+            android:textColor="@android:color/holo_green_light"/>
+
+
+
+        <Button
+            android:id="@+id/Video"
+            android:layout_width="210dp"
+            android:layout_height="30dp"
+            android:layout_marginTop="680dp"
+            android:layout_marginRight="0dip"
+            android:layout_gravity="right"
+
+            android:background="@android:color/white"
+            android:clickable="true"
+            android:text="Video"
+            android:textColor="@android:color/holo_green_light"/>
+
+
+
+    <Button
+        android:id="@+id/buttonLeftCam"
+        android:layout_width="180dp"
+        android:layout_height="285dp"
+        android:layout_marginLeft="5dip"
+        android:layout_marginTop="40dip"
+        android:clickable="true"
+        android:background="@android:color/transparent"/>
+
+    <Button
+        android:id="@+id/buttonRightCam"
+        android:layout_width="180dp"
+        android:layout_height="285dp"
+        android:layout_marginLeft="223dip"
+        android:layout_marginTop="40dip"
+        android:clickable="true"
+        android:background="@android:color/transparent"/>
+
+    <TextView
+        android:id="@+id/textview0"
+        android:layout_height="50dp"
+        android:layout_width="200dp"
+        android:layout_marginLeft="5dip"
+        android:layout_marginBottom="10dip"
+        android:layout_gravity="bottom"
+        android:textSize="20dp"
+        android:elevation="6dp"
+        android:textColor="#646464"/>
+
+    <TextView
+        android:id="@+id/textview1"
+        android:layout_height="50dp"
+        android:layout_width="200dp"
+        android:layout_marginLeft="5dip"
+        android:layout_marginTop="10dip"
+        android:textSize="20dp"
+        android:elevation="6dp"
+        android:textColor="#646464"/>
+
+    <TextView
+        android:id="@+id/textview2"
+        android:layout_height="50dp"
+        android:layout_width="200dp"
+        android:layout_marginLeft="223dip"
+        android:layout_marginTop="10dip"
+        android:textSize="20dp"
+        android:elevation="6dp"
+        android:textColor="#646464"/>
+
+    <Button
+        android:id="@+id/buttonSDC"
+        android:background="@drawable/icon_x"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginLeft="330dp"
+        android:layout_marginBottom="20dip"
+        android:layout_gravity="bottom" />
+
+    <Button
+        android:id="@+id/buttonVideo"
+        android:background="@drawable/video_capture"
+        android:layout_width="75dp"
+        android:layout_height="75dp"
+        android:layout_marginLeft="175dp"
+        android:layout_marginBottom="5dip"
+        android:layout_gravity="bottom"
+        android:clickable="true" />
+
+    <Button
+        android:id="@+id/Burst"
+        android:background="@drawable/ic_settings_continuous"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_marginLeft="175dp"
+        android:layout_marginBottom="5dip"
+        android:layout_gravity="bottom"
+        android:clickable="true" />
+
+    <Button
+        android:id="@+id/shutter_button"
+        android:background="@drawable/photo_capture"
+        android:layout_width="75dp"
+        android:layout_height="75dp"
+        android:layout_marginLeft="175dp"
+        android:layout_marginBottom="5dip"
+        android:layout_gravity="bottom"
+        android:clickable="true" />
+
+    <Button
+        android:id="@+id/buttonLShot"
+        android:background="@drawable/photo_capture"
+        android:layout_width="75dp"
+        android:layout_height="75dp"
+        android:layout_marginLeft="50dp"
+        android:layout_marginBottom="5dip"
+        android:layout_gravity="bottom"
+        android:clickable="true" />
+
+
+    <Button
+        android:id="@+id/settings"
+        android:background="@drawable/settings"
+        android:layout_width="45dp"
+        android:layout_height="45dp"
+        android:layout_marginLeft="345dp"
+        android:layout_marginTop="15dip"
+        android:layout_gravity="top"
+        android:clickable="true" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_marginBottom="100dp"
+        android:background="@android:color/transparent"
+        android:elevation="6dp">
+
+        <android.support.v7.widget.RecyclerView
+            android:id="@+id/mode_select_layout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal|bottom"
+            android:layout_centerHorizontal="true"
+            android:scrollbars="none" />
+
+    </FrameLayout>
+
+
+</FrameLayout>
+
+<FrameLayout
+android:layout_width="match_parent"
+android:layout_height="match_parent">
+<com.android.camera.ui.Camera2FaceView
+    android:id="@+id/overlay_view"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:elevation="5dp"/>
+</FrameLayout>
+</merge>
+

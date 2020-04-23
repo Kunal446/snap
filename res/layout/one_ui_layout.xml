@@ -60,6 +60,15 @@
         android:src="@drawable/photo_capture" />
 
     <com.android.camera.ui.RotateImageView
+        android:id="@+id/activity_button"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:clickable="true"
+        android:layout_marginLeft="5dip"
+        android:layout_marginTop="440dip"
+        android:src="@drawable/PIP"/>
+
+    <com.android.camera.ui.RotateImageView
         android:id="@+id/video_button"
         android:layout_width="@dimen/one_ui_bottom_large"
         android:layout_height="@dimen/one_ui_bottom_large"
@@ -276,7 +285,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
         android:layout_marginBottom="100dp"
-        android:background="@color/camera_control_bg_transparent">
+        android:background="@android:color/transparent">
 
         <android.support.v7.widget.RecyclerView
             android:id="@+id/mode_select_layout"

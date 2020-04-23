@@ -1357,6 +1357,12 @@
     <string name="pref_camera2_live_preview_entry_value_enable" translatable="false">1</string>
     <string name="pref_camera2_live_preview_entry_value_disable" translatable="false">0</string>
 
+    <string name="pref_camera2_mfnr1_title" translatable="true">MFNR</string>
+    <string name="pref_camera2_mfnr1_default" translatable="false">disable</string>
+    <!-- QCFA choices -->
+    <string name="pref_camera_mfnr1_value_disable">disable</string>
+    <string name="pref_camera_mfnr1_value_enable">enable</string>
+
     <string name="pref_camera2_fs2_title" translatable="true">FastShutter</string>
     <string name="pref_camera2_fs2_default" translatable="false">0</string>
     <string name="pref_camera2_fs2_entry_enable" translatable="true">enable</string>
@@ -1384,5 +1390,14 @@
     <string name="pref_camera_tone_mapping_value_fourth_tone_anchor">fourth_tone_anchor</string>
     <string name="pref_camera_tone_mapping_value_user_setting">user_setting</string>
     <string name="pref_camera_tone_mapping_value_off">off</string>
+
+    <string name="pref_camera2_cameras_to_start_title" translatable="true">Cameras to start</string>
+    <!-- <string name="pref_camera2_cameras_to_start_default" translatable="false"></string> -->
+    <string name="pref_camera2_back_camera_one_entry" translatable="false">Back camera 1</string>
+    <string name="pref_camera2_back_camera_two_entry" translatable="false">Back camera 2</string>
+    <string name="pref_camera2_back_camera_three_entry" translatable="false">Back camera 3</string>
+    <string name="pref_camera2_cameras_to_start_entry_value_enable_back_camera_one" translatable="false">0</string>
+    <string name="pref_camera2_cameras_to_start_entry_value_enable_back_camera_two" translatable="false">1</string>
+    <string name="pref_camera2_cameras_to_start_entry_value_enable_back_camera_three" translatable="false">2</string>
 </resources>
 

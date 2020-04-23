@@ -790,4 +790,11 @@ CHAR LIMIT = NONE] -->
     <string name="camera_sat_mode">SAT</string>
     <string name="camera_pano_mode">Panorama</string>
     <string name="camera_pro_mode">ProMode</string>
+
+    <string name="camera_0">Camera 0</string>
+    <string name="camera_1">Camera 1</string>
+    <string name="camera_2">Camera 2</string>
+    <!-- <string name="mfnr">MFNR</string>
+    <string name="qcfa">QCFA</string> -->
+
  </resources>

@@ -130,6 +130,26 @@ public class Camera2FaceView extends FaceView {
                 faceRect.right > mCameraBound.right || faceRect.bottom > mCameraBound.bottom;
     }
 
+    private boolean checkForPiP = false;
+    private int mUncroppedWidthPiP =0;
+    private int mUncroppedHeightPiP =0;
+    private int orientationPiP =0;
+    private int offsetXPiP =0;
+    private int offsetYPiP =0;
+    public void setParamsForPiP(boolean checkPiP,
+                                int uncroppedWidth,
+                                int uncroppedHeight,
+                                int orientation,
+                                int offsetX,
+                                int offsetY){
+        checkForPiP = checkPiP;
+        mUncroppedWidthPiP = uncroppedWidth;
+        mUncroppedHeightPiP =  uncroppedHeight;
+        orientationPiP = orientation;
+        offsetXPiP = offsetX;
+        offsetYPiP = offsetY;
+    }
+
     @Override
     public boolean faceExists() {
         return (mFaces != null && mFaces.length > 0);
@@ -139,6 +159,11 @@ public class Camera2FaceView extends FaceView {
     protected void onDraw(Canvas canvas) {
         if (!mBlocked && (mFaces != null) && (mFaces.length > 0) && mCameraBound != null) {
             int rw, rh;
+            if(checkForPiP){
+                mUncroppedWidth = mUncroppedWidthPiP;
+                mUncroppedHeight = mUncroppedHeightPiP;
+                mDisplayOrientation = orientationPiP;
+            }
             rw = mUncroppedWidth;
             rh = mUncroppedHeight;
             if (((rh > rw) && ((mDisplayOrientation == 0) || (mDisplayOrientation == 180)))
@@ -205,7 +230,6 @@ public class Camera2FaceView extends FaceView {
                     }
                 }
             }
-
 
             for (int i = 0; i < mFaces.length; i++) {
                 if (mFaces[i].getScore() < 50) continue;

@@ -20,6 +20,7 @@
 package com.android.camera;
 
 import android.animation.Animator;
+import android.os.Bundle;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
@@ -190,6 +191,7 @@ public class CaptureUI implements FocusOverlayManager.FocusUI,
     };
 
     private ShutterButton mShutterButton;
+    private RotateImageView mActivityButton;
     private ImageView mVideoButton;
     private RenderOverlay mRenderOverlay;
     private FlashToggleButton mFlashButton;
@@ -354,6 +356,27 @@ public class CaptureUI implements FocusOverlayManager.FocusUI,
         mProgressBar = (ProgressBar) mRootView.findViewById(R.id.progress_bar);
         mRenderOverlay = (RenderOverlay) mRootView.findViewById(R.id.render_overlay);
         mShutterButton = (ShutterButton) mRootView.findViewById(R.id.shutter_button);
+        mActivityButton = (RotateImageView) mRootView.findViewById(R.id.activity_button);
+
+        if (PersistUtil.getCameraPIP() && mSettingsManager.backFacingPhysicalCameras.size()>0) {
+            mActivityButton.setClickable(true);
+            mActivityButton.setVisibility(View.VISIBLE);
+        } else {
+            mActivityButton.setClickable(false);
+            mActivityButton.setVisibility(View.GONE);
+        }
+
+        mActivityButton.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View v) {
+                Bundle idData = new Bundle();
+                idData.putCharSequenceArrayList("ids",mSettingsManager.backFacingPhysicalCameras);
+                Log.i("bundle_receive", "" + mSettingsManager.backFacingPhysicalCameras.size());
+                Intent myIntent = new Intent(mActivity, MainActivity.class);
+                myIntent.putExtra("initial_ids",idData);
+                mActivity.startActivity(myIntent,idData);
+            }
+        });
         mVideoButton = (ImageView) mRootView.findViewById(R.id.video_button);
         mExitBestMode = (ImageView) mRootView.findViewById(R.id.exit_best_mode);
         mFilterModeSwitcher = mRootView.findViewById(R.id.filter_mode_switcher);

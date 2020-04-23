@@ -138,6 +138,8 @@ public class PersistUtil {
             SystemProperties.getInt("persist.sys.camera.burst.preview.nums", 1);
     private static final boolean PERSIST_SSM_ENABLE =
             SystemProperties.getBoolean("persist.sys.camera.ssm.enable", false);
+    private static final boolean PERSIST_PIP_ENABLE =
+            SystemProperties.getBoolean("persist.vendor.camera.enablePIPMode", false);
 
     public static int getMemoryLimit() {
         return PERSIST_MEMORY_LIMIT;
@@ -186,6 +188,10 @@ public class PersistUtil {
             }
         }
         return result;
+    }
+
+    public static boolean getCameraPIP() {
+        return PERSIST_PIP_ENABLE;
     }
 
     public static boolean getCamera2Mode() {
