@@ -57,6 +57,9 @@ import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.ImageFormat;
+import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraCharacteristics;
 import android.os.Bundle;
 import android.preference.ListPreference;
 import android.preference.MultiSelectListPreference;
@@ -972,10 +975,10 @@ public class SettingsActivity extends PreferenceActivity {
         CharSequence[] entries = mSettingsManager.getEntries(SettingsManager.KEY_SCENE_MODE);
         if (entries != null) {
             List<CharSequence> list = Arrays.asList(entries);
-            if (mDeveloperMenuEnabled && list != null && !list.contains("HDR")){
+            if (mDeveloperMenuEnabled && list != null && !list.contains("HDR")) {
                 Preference p = findPreference("pref_camera2_hdr_key");
-                if (p != null){
-                    PreferenceGroup developer = (PreferenceGroup)findPreference("developer");
+                if (p != null) {
+                    PreferenceGroup developer = (PreferenceGroup) findPreference("developer");
                     developer.removePreference(p);
                 }
             }
@@ -1004,7 +1007,7 @@ public class SettingsActivity extends PreferenceActivity {
                 add(SettingsManager.KEY_SATURATION_LEVEL);
                 add(SettingsManager.KEY_ANTI_BANDING_LEVEL);
                 add(SettingsManager.KEY_STATS_VISUALIZER_VALUE);
-                add(SettingsManager.KEY_SAVERAW);
+//                add(SettingsManager.KEY_SAVERAW);
                 add(SettingsManager.KEY_AUTO_HDR);
                 add(SettingsManager.KEY_MANUAL_EXPOSURE);
                 add(SettingsManager.KEY_SHARPNESS_CONTROL_MODE);
@@ -1037,7 +1040,7 @@ public class SettingsActivity extends PreferenceActivity {
                 (CaptureModule.CameraMode) getIntent().getSerializableExtra(CAMERA_MODULE);
 
         final SharedPreferences pref = getSharedPreferences(
-                ComboPreferences.getGlobalSharedPreferencesName(this),Context.MODE_PRIVATE);
+                ComboPreferences.getGlobalSharedPreferencesName(this), Context.MODE_PRIVATE);
         int isSupportT2T = pref.getInt(
                 SettingsManager.KEY_SUPPORT_T2T_FOCUS, -1);
         boolean isSupportedT2T = mSettingsManager.isT2TSupported();
@@ -1116,8 +1119,13 @@ public class SettingsActivity extends PreferenceActivity {
                 break;
         }
         Preference longshotPref = findPreference(SettingsManager.KEY_LONGSHOT);
-        if (longshotPref != null && !mSettingsManager.isBurstShotSupported() && photoPre != null){
+        if (longshotPref != null && !mSettingsManager.isBurstShotSupported() && photoPre != null) {
             photoPre.removePreference(longshotPref);
+        }
+
+        Preference multiCameraPref = findPreference(SettingsManager.KEY_MULTI_CAMERAS_MODE);
+        if (!isMultiCameraEnable() && developer != null && multiCameraPref != null) {
+            developer.removePreference(multiCameraPref);
         }
     }
 
@@ -1177,6 +1185,7 @@ public class SettingsActivity extends PreferenceActivity {
         updateFormatPreference();
         updateEISPreference();
         updateStoragePreference();
+        updateMfnrPreference();
 
         Map<String, SettingsManager.Values> map = mSettingsManager.getValuesMap();
         if (map == null) return;
@@ -1192,10 +1201,8 @@ public class SettingsActivity extends PreferenceActivity {
             String value = disabled ? values.overriddenValue : values.value;
             if (p instanceof SwitchPreference) {
                 ((SwitchPreference) p).setChecked(isOn(value));
-                ((SwitchPreference) p).setEnabled(true);
             } else if (p instanceof ListPreference) {
                 ListPreference pref = (ListPreference) p;
-                pref.setEnabled(true);
                 pref.setValue(value);
                 if (pref.getEntryValues().length == 1) {
                     pref.setEnabled(false);
@@ -1244,6 +1251,26 @@ public class SettingsActivity extends PreferenceActivity {
         pref.setEnabled(isWrite);
         if (!isWrite) {
             updatePreference(SettingsManager.KEY_CAMERA_SAVEPATH);
+        }
+    }
+
+    private void updateMfnrPreference(){
+        CaptureModule.CameraMode mode =
+                (CaptureModule.CameraMode) getIntent().getSerializableExtra(CAMERA_MODULE);
+        boolean mIsVideoFlash = mode == CaptureModule.CameraMode.VIDEO ||
+                mode == CaptureModule.CameraMode.PRO_MODE ||
+                mode == CaptureModule.CameraMode.HFR;
+        String key;
+        if (mIsVideoFlash) {
+            key = SettingsManager.KEY_VIDEO_FLASH_MODE;
+        } else {
+            key = SettingsManager.KEY_FLASH_MODE;
+        }
+        int flashValue = mSettingsManager.getValueIndex(key);
+        ListPreference mfnrPref = (ListPreference) findPreference(SettingsManager.KEY_CAPTURE_MFNR_VALUE);
+
+        if (mfnrPref != null && (flashValue != 0 && flashValue != -1) && (mode != CaptureModule.CameraMode.RTB && mode != CaptureModule.CameraMode.SAT)) {
+            mfnrPref.setEnabled(false);
         }
     }
 
@@ -1350,8 +1377,39 @@ public class SettingsActivity extends PreferenceActivity {
         params.flags |= WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED;
         win.setAttributes(params);
     }
-    private
-    void onRestoreDefaultSettingsClick() {
+
+    private boolean isMultiCameraEnable() {
+        boolean result = false;
+        CameraManager manager = (CameraManager) this.getSystemService(Context.CAMERA_SERVICE);
+        String[] cameraIdList = null;
+        try {
+            cameraIdList = manager.getCameraIdList();
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+        if (cameraIdList == null || cameraIdList.length == 0) {
+            return result;
+        }
+        for (int i = 0; i < cameraIdList.length; i++) {
+            String cameraId = cameraIdList[i];
+            CameraCharacteristics characteristics;
+            try {
+                characteristics = manager.getCameraCharacteristics(cameraId);
+            } catch (CameraAccessException e) {
+                e.printStackTrace();
+                continue;
+            }
+            Set<String> physicalCameraIds = characteristics.getPhysicalCameraIds();
+            if (physicalCameraIds != null && physicalCameraIds.size() > 0) {
+                result |= true;
+            } else {
+                result |= false;
+            }
+        }
+        return result;
+    }
+
+    private void onRestoreDefaultSettingsClick() {
         new AlertDialog.Builder(this)
                 .setMessage(R.string.pref_camera2_restore_default_hint)
                 .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
@@ -1366,6 +1424,21 @@ public class SettingsActivity extends PreferenceActivity {
     private void restoreSettings() {
         mSettingsManager.restoreSettings();
         filterPreferences();
+        restoreAllPreference();
         initializePreferences();
+    }
+
+    private void restoreAllPreference(){
+        Map<String, SettingsManager.Values> map = mSettingsManager.getValuesMap();
+        if (map == null) return;
+        Set<Map.Entry<String, SettingsManager.Values>> set = map.entrySet();
+
+        for (Map.Entry<String, SettingsManager.Values> entry : set) {
+            String key = entry.getKey();
+            Preference p = findPreference(key);
+            if (p == null) continue;
+
+            p.setEnabled(true);
+        }
     }
 }

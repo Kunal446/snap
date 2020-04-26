@@ -175,6 +175,7 @@ public class SettingsManager implements ListMenu.SettingsListener {
     public static final String KEY_DEVELOPER_MENU = "pref_camera2_developer_menu_key";
     public static final String KEY_RESTORE_DEFAULT = "pref_camera2_restore_default_key";
     public static final String KEY_FOCUS_DISTANCE = "pref_camera2_focus_distance_key";
+    public static final String KEY_ZOOM_LEVEL = "pref_camera2_zoom_level_key";
     public static final String KEY_INSTANT_AEC = "pref_camera2_instant_aec_key";
     public static final String KEY_SATURATION_LEVEL = "pref_camera2_saturation_level_key";
     public static final String KEY_ANTI_BANDING_LEVEL = "pref_camera2_anti_banding_level_key";
@@ -257,6 +258,7 @@ public class SettingsManager implements ListMenu.SettingsListener {
     private int mDeviceSocId = -1;
     private Map<String,VideoEisConfig> mVideoEisConfigs;
     private ArrayList<String> mPrepNameKeys;
+    private float mZoomMaxValue;
 
     private static Map<String, Set<String>> VIDEO_ENCODER_PROFILE_TABLE = new HashMap<>();
 
@@ -604,7 +606,9 @@ public class SettingsManager implements ListMenu.SettingsListener {
                 isCameraFDSupported =
                         mCharacteristics.get(mCameraId).get(CaptureModule.is_camera_fd_supported) == 1;
             } catch (IllegalArgumentException e) {
-                Log.d(TAG, "isCameraFDSupported no vendor tag");
+                if (DEBUG) {
+                    Log.w(TAG, "isCameraFDSupported no vendor tag");
+                }
                 isCameraFDSupported = true;
             }
         }
@@ -876,6 +880,11 @@ public class SettingsManager implements ListMenu.SettingsListener {
         return facing + String.valueOf(CaptureModule.CURRENT_MODE);
     }
 
+    public String getNextPrepNameKey(CaptureModule.CameraMode nextMode) {
+        String facing = mPreferences.getGlobal().getString(KEY_FRONT_REAR_SWITCHER_VALUE, "rear");
+        return facing + String.valueOf(nextMode);
+    }
+
     public String getValue(String key) {
         if (mValuesMap == null) return null;
         Values values = mValuesMap.get(key);
@@ -907,12 +916,12 @@ public class SettingsManager implements ListMenu.SettingsListener {
         return result;
     }
 
-    public float getFocusSliderValue(String key) {
+    public float getProModeSliderValue(String key, float defaultValue) {
         String prefName = ComboPreferences.getLocalSharedPreferencesName(mContext,
                 getCurrentPrepNameKey());
         SharedPreferences sharedPreferences = mContext.getSharedPreferences(prefName,
                 Context.MODE_PRIVATE);
-        return sharedPreferences.getFloat(key, 0.5f);
+        return sharedPreferences.getFloat(key, defaultValue);
     }
 
     public boolean isOverriden(String key) {
@@ -954,7 +963,7 @@ public class SettingsManager implements ListMenu.SettingsListener {
         }
     }
 
-    public void setFocusSliderValue(String key, boolean forceNotify, float value) {
+    public void setProModeSliderValue(String key, boolean forceNotify, float value) {
         boolean isSuccess = false;
         if (value >= 0) {
             isSuccess = setFocusValue(key, value);
@@ -962,7 +971,7 @@ public class SettingsManager implements ListMenu.SettingsListener {
         if (isSuccess || forceNotify) {
             List<SettingState> list = new ArrayList<>();
             Values values = new Values("" + value, null);
-            SettingState ss = new SettingState(KEY_FOCUS_DISTANCE, values);
+            SettingState ss = new SettingState(key, values);
             list.add(ss);
             notifyListeners(list);
         }
@@ -970,7 +979,13 @@ public class SettingsManager implements ListMenu.SettingsListener {
 
     public float getCalculatedFocusDistance() {
         float minFocus = getMinimumFocusDistance(mCameraId);
-        return getFocusSliderValue(KEY_FOCUS_DISTANCE) * minFocus;
+        return getProModeSliderValue(KEY_FOCUS_DISTANCE, 0.5f) * minFocus;
+    }
+
+    public float getCalculatedZoomValue() {
+        float minZoom = 1.0f;
+        float maxZoom = getmZoomMaxValue();
+        return getProModeSliderValue(KEY_ZOOM_LEVEL, 0.0f) * (maxZoom - minZoom) + minZoom;
     }
 
     private void updateMapAndNotify(ListPreference pref) {
@@ -1734,8 +1749,13 @@ public class SettingsManager implements ListMenu.SettingsListener {
     }
 
     public float getMaxZoom(int id) {
-        return mCharacteristics.get(id).get(CameraCharacteristics
+        mZoomMaxValue = mCharacteristics.get(id).get(CameraCharacteristics
                 .SCALER_AVAILABLE_MAX_DIGITAL_ZOOM);
+        return mZoomMaxValue;
+    }
+
+    public float getmZoomMaxValue() {
+        return mZoomMaxValue;
     }
 
     public Rect getSensorActiveArraySize(int id) {
@@ -1833,7 +1853,9 @@ public class SettingsManager implements ListMenu.SettingsListener {
                 isFDRenderingInVideoUISupported = mCharacteristics.get(mCameraId).get(CaptureModule.is_FD_Rendering_In_Video_UI_Supported) == 1;
             } catch (IllegalArgumentException e) {
                 isFDRenderingInVideoUISupported = true;
-                Log.e(TAG, "isFDRenderingInVideoUISupported no vendorTag isFDRenderingInVideoUISupported:");
+                if (DEBUG) {
+                    Log.w(TAG, "isFDRenderingInVideoUISupported no vendorTag isFDRenderingInVideoUISupported:");
+                }
             }
         }
         return isFDRenderingInVideoUISupported;
@@ -2608,6 +2630,26 @@ public class SettingsManager implements ListMenu.SettingsListener {
         if(mValuesMap != null) mValuesMap = null;
         mCaptureModule.restoreCameraIds();
         init();
+    }
+
+    public boolean isSWMFNRSupported(){
+        boolean isSWMFNRSupported = false;
+        try {
+            isSWMFNRSupported = mCharacteristics.get(mCameraId).get(CaptureModule.mfnr_type) == CaptureModule.MFNRSupportValues.SWMFNRSupport.ordinal();
+            Log.i(TAG,"mfnr type:" + mCharacteristics.get(mCameraId).get(CaptureModule.mfnr_type));
+        } catch (IllegalArgumentException e) {
+            Log.d(TAG, "isSWMFNRSupported no vendor tag");
+        }
+        return isSWMFNRSupported;
+    }
+
+    public boolean isMFNREnabled() {
+        boolean mfnrEnable = false;
+        String mfnrValue = getValue(SettingsManager.KEY_CAPTURE_MFNR_VALUE);
+        if (mfnrValue != null) {
+            mfnrEnable = mfnrValue.equals("1");
+        }
+        return mfnrEnable;
     }
 
     private void clearPerCameraPreferences() {
