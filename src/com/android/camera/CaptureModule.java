@@ -4290,6 +4290,7 @@ public class CaptureModule implements CameraModule, PhotoController,
             if(mLockAFAE) {
                 mLockAFAE = false;
                 updateLockAFAEVisibility();
+                mUI.initFlashButton();
             }
         }
         if (mLocationManager != null) mLocationManager.recordLocation(false);
@@ -4987,6 +4988,7 @@ public class CaptureModule implements CameraModule, PhotoController,
             cancelTouchFocus(mCurrentSceneMode.getCurrentId());
             applySettingsForUnlockExposure(mPreviewRequestBuilder[mCurrentSceneMode.getCurrentId()], mCurrentSceneMode.getCurrentId());
             updateLockAFAEVisibility();
+            mUI.initFlashButton();
         }
         int[] newXY = {x, y};
         if (mUI.isOverControlRegion(newXY)) return;
@@ -5017,6 +5019,7 @@ public class CaptureModule implements CameraModule, PhotoController,
 
         mClickPosition[0] = x;
         mClickPosition[1] = y;
+        mUI.hideFlashButton();
         int[] newXY = {x, y};
         if (mUI.isOverControlRegion(newXY)) return;
         if (!mUI.isOverSurfaceView(newXY)) return;
