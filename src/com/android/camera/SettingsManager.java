@@ -695,6 +695,7 @@ public class SettingsManager implements ListMenu.SettingsListener {
             String value = getValue(dependentKey);
             JSONObject dependencyList = getDependencyList(dependentKey, value);
 
+            if(dependencyList == null) continue;
             String newValue = null;
             try {
                 newValue = dependencyList.getString(keyToProcess);
