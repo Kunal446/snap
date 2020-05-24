@@ -1399,5 +1399,7 @@
     <string name="pref_camera2_cameras_to_start_entry_value_enable_back_camera_one" translatable="false">0</string>
     <string name="pref_camera2_cameras_to_start_entry_value_enable_back_camera_two" translatable="false">1</string>
     <string name="pref_camera2_cameras_to_start_entry_value_enable_back_camera_three" translatable="false">2</string>
+
+    <string name="lock_af_ae_label">AE/AF Lock</string>
 </resources>
 

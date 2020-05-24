@@ -197,6 +197,11 @@ public class SettingsActivity extends PreferenceActivity {
                     mSettingsManager.filterEISVideQualityOptions();
                     updatePreference(SettingsManager.KEY_VIDEO_QUALITY);
                 }
+
+                if(pref.getKey().equals(SettingsManager.KEY_VIDEO_QUALITY) ||
+                   pref.getKey().equals(SettingsManager.KEY_VIDEO_HIGH_FRAME_RATE)){
+                    updateEISPreference();
+                }
             }
         }
     };
@@ -237,18 +242,29 @@ public class SettingsActivity extends PreferenceActivity {
         ListPreference ZSLPref = (ListPreference) findPreference(SettingsManager.KEY_ZSL);
         ListPreference mfnrPref = (ListPreference) findPreference(SettingsManager.KEY_CAPTURE_MFNR_VALUE);
         SwitchPreference selfiePref = (SwitchPreference) findPreference(SettingsManager.KEY_SELFIEMIRROR);
-        if (formatPref == null) {
+        if (formatPref == null)
             return;
-        }
+
+        String sceneMode = mSettingsManager.getValue(SettingsManager.KEY_SCENE_MODE);
         if((ZSLPref != null && "app-zsl".equals(ZSLPref.getValue())) ||
+                (sceneMode != null && Integer.valueOf(sceneMode) == SettingsManager.SCENE_MODE_HDR_INT) ||
                 (selfiePref != null && selfiePref.isChecked())){
+
             formatPref.setValue("0");
             formatPref.setEnabled(false);
+        } else {
+            formatPref.setEnabled(true);
+        }
+
+        if (mfnrPref == null)
+            return;
+
+        if((ZSLPref != null &&"app-zsl".equals(ZSLPref.getValue())) ||
+                (selfiePref != null && selfiePref.isChecked())){
             if (mfnrPref != null) {
                 mfnrPref.setEnabled(false);
             }
         } else {
-            formatPref.setEnabled(true);
             if (mfnrPref != null) {
                 mfnrPref.setEnabled(true);
             }
@@ -309,7 +325,11 @@ public class SettingsActivity extends PreferenceActivity {
                     String iso = ISOinput.getText().toString();
                     Log.v(TAG, "string iso length " + iso.length() + ", iso :" + iso);
                     if (iso.length() > 0) {
-                        newISO = Integer.parseInt(iso);
+                        try {
+                            newISO = Integer.parseInt(iso);
+                        } catch(NumberFormatException e) {
+                            Log.w(TAG, "ISOinput type incorrect value entered ");
+                        }
                     }
                     if (newISO <= isoRange[1] && newISO >= isoRange[0]) {
                         editor.putString(SettingsManager.KEY_MANUAL_ISO_VALUE, iso);
@@ -394,7 +414,11 @@ public class SettingsActivity extends PreferenceActivity {
                     String iso = ISOinput.getText().toString();
                     Log.v(TAG, "string iso length " + iso.length() + ", iso :" + iso);
                     if (iso.length() > 0) {
-                        newISO = Integer.parseInt(iso);
+                        try {
+                            newISO = Integer.parseInt(iso);
+                        } catch(NumberFormatException e) {
+                            Log.w(TAG, "ISOinput type incorrect value entered ");
+                        }
                     }
                     if (newISO <= isoRange[1] && newISO >= isoRange[0]) {
                         editor.putString(SettingsManager.KEY_MANUAL_ISO_VALUE, iso);
@@ -463,7 +487,11 @@ public class SettingsActivity extends PreferenceActivity {
                 String gain = gainsInput.getText().toString();
                 Log.v(TAG, "string gain length " + gain.length() + ", gain :" + gain);
                 if (gain.length() > 0) {
-                    newGain = Float.parseFloat(gain);
+                    try {
+                        newGain = Float.parseFloat(gain);
+                    } catch(NumberFormatException e) {
+                        Log.w(TAG, "gainsInput type incorrect value ");
+                    }
                 }
                 if (newGain <= gainsRange[1] && newGain >= gainsRange[0]) {
                     editor.putFloat(SettingsManager.KEY_MANUAL_GAINS_VALUE, newGain);
@@ -548,13 +576,25 @@ public class SettingsActivity extends PreferenceActivity {
                 String ggainStr = gGainInput.getText().toString();
                 String bgainStr = bGainInput.getText().toString();
                 if (rgainStr.length() > 0) {
-                    rGain = Float.parseFloat(rgainStr);
+                    try {
+                        rGain = Float.parseFloat(rgainStr);
+                    } catch(NumberFormatException e) {
+                        Log.w(TAG, "rGainInput type incorrect value ");
+                    }
                 }
                 if (ggainStr.length() > 0) {
-                    gGain = Float.parseFloat(ggainStr);
+                    try {
+                        gGain = Float.parseFloat(ggainStr);
+                    } catch (NumberFormatException e) {
+                        Log.w(TAG, "gGainInput type incorrect value ");
+                    }
                 }
                 if (bgainStr.length() > 0) {
-                    bGain = Float.parseFloat(bgainStr);
+                    try {
+                        bGain = Float.parseFloat(bgainStr);
+                    } catch(NumberFormatException e) {
+                        Log.w(TAG, "bGainInput type incorrect value ");
+                    }
                 }
                 if (gainsRange == null) {
                     RotateTextToast.makeText(SettingsActivity.this, "Gains Range is NULL, " +
@@ -583,6 +623,13 @@ public class SettingsActivity extends PreferenceActivity {
                             Toast.LENGTH_SHORT).show();
                 }
                 editor.apply();
+            }
+        });
+        alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog,int id) {
+                editor.putString(SettingsManager.KEY_MANUAL_WB, "off");
+                editor.apply();
+                dialog.cancel();
             }
         });
         alert.show();
@@ -634,7 +681,11 @@ public class SettingsActivity extends PreferenceActivity {
                     int newCCT = -1;
                     String cct = CCTinput.getText().toString();
                     if (cct.length() > 0) {
-                        newCCT = Integer.parseInt(cct);
+                        try {
+                            newCCT = Integer.parseInt(cct);
+                        } catch (NumberFormatException e) {
+                            Log.w(TAG, "CCTinput type incorrect value ");
+                        }
                     }
                     if (wbRange == null) {
                         RotateTextToast.makeText(SettingsActivity.this, "CCT Range is NULL, " +
@@ -654,6 +705,8 @@ public class SettingsActivity extends PreferenceActivity {
             });
             alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
                 public void onClick(DialogInterface dialog,int id) {
+                    editor.putString(SettingsManager.KEY_MANUAL_WB, "off");
+                    editor.apply();
                     dialog.cancel();
                 }
             });
@@ -729,16 +782,23 @@ public class SettingsActivity extends PreferenceActivity {
                 String darkBoostStr = darkBoostInput.getText().toString();
                 String fourthToneStr = fourthToneInput.getText().toString();
                 if (darkBoostStr.length() > 0) {
-                    darkBoost = Float.parseFloat(darkBoostStr);
+                    try {
+                        darkBoost = Float.parseFloat(darkBoostStr);
+                    } catch (NumberFormatException e) {
+                        Log.w(TAG, "darkBoostInput type incorrect value ");
+                    }
                 } else {
                     editor.putFloat(SettingsManager.KEY_TONE_MAPPING_DARK_BOOST, -1.0f);
                 }
                 if (fourthToneStr.length() > 0) {
-                    fourthTone = Float.parseFloat(fourthToneStr);
+                    try {
+                        fourthTone = Float.parseFloat(fourthToneStr);
+                    } catch (NumberFormatException e) {
+                        Log.w(TAG, "fourthToneInput type incorrect value ");
+                    }
                 } else {
                     editor.putFloat(SettingsManager.KEY_TONE_MAPPING_FOURTH_TONE, -1.0f);
                 }
-
                 if (darkBoost <= toneMappingRange[1] && darkBoost >= toneMappingRange[0]) {
                     Log.v(TAG, "Setting darkBoost value : " + darkBoost);
                     editor.putFloat(SettingsManager.KEY_TONE_MAPPING_DARK_BOOST, darkBoost);
@@ -746,6 +806,7 @@ public class SettingsActivity extends PreferenceActivity {
                     RotateTextToast.makeText(SettingsActivity.this, "Invalid darkBoost value:",
                             Toast.LENGTH_SHORT).show();
                 }
+
                 if (fourthTone <= toneMappingRange[1] && fourthTone >= toneMappingRange[0]) {
                     Log.v(TAG, "Setting fourthTone value : " + fourthTone);
                     editor.putFloat(SettingsManager.KEY_TONE_MAPPING_FOURTH_TONE, fourthTone);
@@ -1057,6 +1118,10 @@ public class SettingsActivity extends PreferenceActivity {
                 //don't filter
                 break;
         }
+        Preference longshotPref = findPreference(SettingsManager.KEY_LONGSHOT);
+        if (longshotPref != null && !mSettingsManager.isBurstShotSupported() && photoPre != null){
+            photoPre.removePreference(longshotPref);
+        }
     }
 
     private boolean removePreference(String key, PreferenceGroup parentPreferenceGroup) {
@@ -1112,7 +1177,9 @@ public class SettingsActivity extends PreferenceActivity {
         updateMultiPreference(SettingsManager.KEY_STATS_VISUALIZER_VALUE);
         updatePictureSizePreferenceButton();
         updateVideoHDRPreference();
+        updateZslPreference();
         updateFormatPreference();
+        updateEISPreference();
         updateStoragePreference();
 
         Map<String, SettingsManager.Values> map = mSettingsManager.getValuesMap();
@@ -1166,7 +1233,6 @@ public class SettingsActivity extends PreferenceActivity {
         } catch (PackageManager.NameNotFoundException e) {
             e.printStackTrace();
         }
-        updateZslPreference();
     }
 
     private void updateStoragePreference() {
@@ -1211,6 +1277,20 @@ public class SettingsActivity extends PreferenceActivity {
         if ( sceneMode != null && picturePref != null ){
             int sceneModeInt = Integer.parseInt(sceneMode);
             picturePref.setEnabled(sceneModeInt != SettingsManager.SCENE_MODE_DUAL_INT);
+        }
+    }
+
+    private void updateEISPreference() {
+        ListPreference eisPref = (ListPreference)findPreference(
+                SettingsManager.KEY_EIS_VALUE);
+        if (eisPref != null) {
+            if (!mSettingsManager.isEISSupported(mSettingsManager.getVideoSize(),
+                    mSettingsManager.getVideoFPS())){
+                eisPref.setValue("disable");
+                eisPref.setEnabled(false);
+            } else {
+                eisPref.setEnabled(true);
+            }
         }
     }
 
