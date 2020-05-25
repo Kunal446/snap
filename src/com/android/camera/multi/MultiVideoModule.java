@@ -419,16 +419,16 @@ public class MultiVideoModule implements MultiCamera, LocationManager.Listener,
     // from MediaRecorder.OnInfoListener
     @Override
     public void onInfo(MediaRecorder mr, int what, int extra) {
-        String[] ids = {"0", "1"};
+        Log.v(TAG, " onInfo what :" + what + " extra :" + extra);
         if (what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED) {
-            for (String id : ids) {
+            for (String id : mCameraIds) {
                 int cameraId = Integer.parseInt(id);
                 if (mIsRecordingVideos[cameraId]) {
                     stopRecordingVideo(cameraId);
                 }
             }
         } else if (what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_FILESIZE_REACHED) {
-            for (String id : ids) {
+            for (String id : mCameraIds) {
                 int cameraId = Integer.parseInt(id);
                 if (mIsRecordingVideos[cameraId]) {
                     stopRecordingVideo(cameraId);
