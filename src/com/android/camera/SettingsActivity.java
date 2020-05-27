@@ -1243,6 +1243,11 @@ public class SettingsActivity extends PreferenceActivity {
             }
         }
 
+        Preference fovcPref = findPreference(SettingsManager.KEY_FOVC_VALUE);
+        if (fovcPref != null && mSettingsManager.isFixedFocus(cameraId)) {
+            fovcPref.setEnabled(false);
+        }
+
         try {
             String versionName = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
             int index = versionName.indexOf(' ');
