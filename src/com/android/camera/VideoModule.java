@@ -2046,6 +2046,7 @@ public class VideoModule implements CameraModule,
                 Log.e(TAG, "stop fail",  e);
                 if (mVideoFilename != null) deleteVideoFile(mVideoFilename);
                 fail = true;
+                mPaused = true;
             }
             mMediaRecorderRecording = false;
 
