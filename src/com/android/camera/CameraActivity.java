@@ -16,7 +16,6 @@
 
 package com.android.camera;
 
-import android.hardware.camera2.CameraAccessException;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.os.Trace;
@@ -54,6 +53,8 @@ import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
+import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraCharacteristics;
 import android.net.Uri;
 import android.media.ThumbnailUtils;
 import android.nfc.NfcAdapter;
@@ -124,6 +125,7 @@ import org.codeaurora.snapcam.R;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Set;
 
 import static com.android.camera.CameraManager.CameraOpenErrorCallback;
 
@@ -264,6 +266,7 @@ public class CameraActivity extends Activity
     private UpdateThumbnailTask mUpdateThumbnailTask;
     private CircularDrawable mThumbnailDrawable;
     private Bitmap mThumbnailBitmap;
+    private android.hardware.camera2.CameraManager mCameraManager;
     // FilmStripView.setDataAdapter fires 2 onDataLoaded calls before any data is actually loaded
     // Keep track of data request here to avoid creating useless UpdateThumbnailTask.
     private boolean mDataRequested;
@@ -1915,6 +1918,7 @@ public class CameraActivity extends Activity
         if (value != null) {
             result = value.equals(getResources().getString(
                     R.string.pref_camera2_multi_cameras_value_on));
+            result &= isMultiCameraEnable();
         } else {
             result = false;
         }
@@ -1922,11 +1926,48 @@ public class CameraActivity extends Activity
         return result;
     }
 
-    private boolean cameraConnected() {
-        android.hardware.camera2.CameraManager manager =
-        (android.hardware.camera2.CameraManager) getSystemService(Context.CAMERA_SERVICE);
+    private boolean isMultiCameraEnable() {
+        boolean result = false;
+        if (mCameraManager == null) {
+            mCameraManager = (android.hardware.camera2.CameraManager) getSystemService(
+                    Context.CAMERA_SERVICE);
+        }
+        String[] cameraIdList = null;
         try {
-            return manager.getCameraIdList().length > 0;
+            cameraIdList = mCameraManager.getCameraIdList();
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+        if (cameraIdList == null || cameraIdList.length == 0) {
+            return result;
+        }
+        for (int i = 0; i < cameraIdList.length; i++) {
+            String cameraId = cameraIdList[i];
+            CameraCharacteristics characteristics;
+            try {
+                characteristics = mCameraManager.getCameraCharacteristics(cameraId);
+            } catch (CameraAccessException e) {
+                e.printStackTrace();
+                continue;
+            }
+            Set<String> physicalCameraIds = characteristics.getPhysicalCameraIds();
+            if (physicalCameraIds != null && physicalCameraIds.size() > 0) {
+                result |= true;
+            } else {
+                result |= false;
+            }
+        }
+        Log.v(TAG, " isMultiCameraEnable :" + result);
+        return result;
+    }
+
+    private boolean cameraConnected() {
+        if (mCameraManager == null) {
+            mCameraManager = (android.hardware.camera2.CameraManager) getSystemService(
+                    Context.CAMERA_SERVICE);
+        }
+        try {
+            return mCameraManager.getCameraIdList().length > 0;
         } catch (CameraAccessException e) {
             e.printStackTrace();
             return false;
