@@ -1783,6 +1783,11 @@ public class CaptureModule implements CameraModule, PhotoController,
         if (valueF < 0) return;
         builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
         builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, valueF);
+        if(mLockAFAE){
+            mLockAFAE = false;
+            applySettingsForUnlockExposure(builder, mCurrentSceneMode.getCurrentId());
+            updateLockAFAEVisibility();
+        }
     }
 
     private void createSessions() {
