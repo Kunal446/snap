@@ -473,6 +473,8 @@ public class CaptureModule implements CameraModule, PhotoController,
             new CaptureRequest.Key<>("org.quic.camera.recording.endOfStream", byte.class);
     public static final CaptureRequest.Key<Integer> earlyPCR =
             new CaptureRequest.Key<>("org.codeaurora.qcamera3.sessionParameters.numPCRsBeforeStreamOn", Integer.class);
+    public static final CaptureRequest.Key<Byte> mctf =
+            new CaptureRequest.Key<>("org.codeaurora.qcamera3.sessionParameters.enableMCTFwithReferenceFrame", byte.class);
     private static final CaptureResult.Key<Byte> is_depth_focus =
             new CaptureResult.Key<>("org.quic.camera.isDepthFocus.isDepthFocus", byte.class);
     private static final CaptureRequest.Key<Byte> capture_burst_fps =
@@ -512,6 +514,8 @@ public class CaptureModule implements CameraModule, PhotoController,
             new CaptureResult.Key<>("org.quic.camera2.objectTrackingResults.TrackerScore", Integer.class);
     public static final CameraCharacteristics.Key<Integer> mfnr_type =
             new CameraCharacteristics.Key<>("org.quic.camera.swcapabilities.MFNRType", Integer.class);
+    public static final CameraCharacteristics.Key<Byte> swmctf =
+            new CameraCharacteristics.Key<>("org.quic.camera.swcapabilities.SWMCTFEnable", byte.class);
 
     private static final CaptureRequest.Key<Byte> rawinfo_idealraw_request =
             new CaptureRequest.Key<>("com.qti.chi.rawcbinfo.IdealRaw", byte.class);
@@ -2171,6 +2175,15 @@ public class CaptureModule implements CameraModule, PhotoController,
             setUpVideoCaptureRequestBuilder(mVideoRecordRequestBuilder, cameraId);
             mPreviewRequestBuilder[cameraId] = mVideoRecordRequestBuilder;
             mIsPreviewingVideo = true;
+            //add for mctf tag
+            if(mSettingsManager.isSwMctfSupported()){
+                int mctfVaule = SystemProperties.getInt("persist.sys.camera.sessionParameters.mctf", 0);
+                try {
+                    mVideoRecordRequestBuilder.set(CaptureModule.mctf, (byte)(mctfVaule == 1 ? 0x01 : 0x00));
+                } catch (IllegalArgumentException e) {
+                    Log.d(TAG, "mctf no vendor tag");
+                }
+            }
             if (ApiHelper.isAndroidPOrHigher()) {
                 if (isHighSpeedRateCapture()) {
                     int optionMode = isSSMEnabled() ? STREAM_CONFIG_SSM : SESSION_HIGH_SPEED;
