@@ -1555,7 +1555,7 @@ public class CaptureModule implements CameraModule, PhotoController,
         } else if (MediaStore.ACTION_VIDEO_CAPTURE.equals(action)) {
             mIntentMode = INTENT_MODE_VIDEO;
         }
-        mQuickCapture = mActivity.getIntent().getBooleanExtra(EXTRA_QUICK_CAPTURE, false);
+        mQuickCapture = mActivity.getIntent().getBooleanExtra(EXTRA_QUICK_CAPTURE, true);
         Bundle myExtras = mActivity.getIntent().getExtras();
         if (myExtras != null) {
             mSaveUri = (Uri) myExtras.getParcelable(MediaStore.EXTRA_OUTPUT);
