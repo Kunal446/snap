@@ -149,8 +149,6 @@ public class PersistUtil {
     private static final boolean PERSIST_CAM_FD_SUPPORTED =
             SystemProperties.getBoolean("persist.sys.camera.isCamFDSupported", false);
 
-
-
     public static int getMemoryLimit() {
         return PERSIST_MEMORY_LIMIT;
     }
@@ -385,4 +383,5 @@ public class PersistUtil {
     public static boolean isTraceEnable() {return PERSIST_TRACE_ENABLE;};
 
     public static boolean isCameraFDSupported() {return PERSIST_CAM_FD_SUPPORTED; }
+
 }

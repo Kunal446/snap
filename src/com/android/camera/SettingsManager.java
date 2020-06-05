@@ -186,6 +186,8 @@ public class SettingsManager implements ListMenu.SettingsListener {
     public static final String KEY_SENSOR_MODE_FS2_VALUE = "pref_camera2_fs2_key";
     public static final String KEY_ABORT_CAPTURES = "pref_camera2_abort_captures_key";
     public static final String KEY_SAVERAW = "pref_camera2_saveraw_key";
+    public static final String KEY_RAW_FORMAT_TYPE = "pref_camera2_raw_format_key";
+    public static final String KEY_RAWINFO_TYPE = "pref_camera2_rawinfo_type_key";
     public static final String KEY_ZOOM = "pref_camera2_zoom_key";
     public static final String KEY_SHARPNESS_CONTROL_MODE = "pref_camera2_sharpness_control_key";
     public static final String KEY_AF_MODE = "pref_camera2_afmode_key";
@@ -695,6 +697,7 @@ public class SettingsManager implements ListMenu.SettingsListener {
             String value = getValue(dependentKey);
             JSONObject dependencyList = getDependencyList(dependentKey, value);
 
+            if(dependencyList == null) continue;
             String newValue = null;
             try {
                 newValue = dependencyList.getString(keyToProcess);
