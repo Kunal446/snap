@@ -203,8 +203,6 @@ public class VideoModule implements CameraModule,
     private boolean mIsVideoCDSUpdated = false;
     private boolean mOverrideCDS = false;
 
-    //settings, which if enabled, need to turn off low power mode
-    private boolean mIsFlipEnabled = false;
     private boolean mIsDISEnabled = false;
 
     // The preview window is on focus
@@ -586,7 +584,6 @@ public class VideoModule implements CameraModule,
             if ((mCameraDevice != null) && (mParameters != null)
                     && (true == mPreviewing) && !mMediaRecorderRecording){
                 setFlipValue();
-                updatePowerMode();
                 mCameraDevice.setParameters(mParameters);
             }
             mUI.tryToCloseSubList();
@@ -2109,12 +2106,6 @@ public class VideoModule implements CameraModule,
         if(CameraUtil.isSupported(picture_flip, CameraSettings.getSupportedFlipMode(mParameters))){
             mParameters.set(CameraSettings.KEY_QC_SNAPSHOT_PICTURE_FLIP, picture_flip);
         }
-
-        if ((preview_flip_value != 0) || (video_flip_value != 0) || (picture_flip_value != 0)) {
-            mIsFlipEnabled = true;
-        } else {
-            mIsFlipEnabled = false;
-        }
     }
 
      private void qcomSetCameraParameters(){
@@ -2383,9 +2374,6 @@ public class VideoModule implements CameraModule,
                 ParametersWrapper.getSupportedVideoRotationValues(mParameters))) {
             ParametersWrapper.setVideoRotation(mParameters, videoRotation);
         }
-
-        //set power mode settings
-        updatePowerMode();
     }
 
     @SuppressWarnings("deprecation")
@@ -2796,16 +2784,4 @@ public class VideoModule implements CameraModule,
     public void onButtonContinue() {
         resumeVideoRecording();
     }
-
-    private void updatePowerMode() {
-        String lpmSupported = mParameters.get("low-power-mode-supported");
-        if ((lpmSupported != null) && "true".equals(lpmSupported)) {
-            if (!mIsDISEnabled && !mIsFlipEnabled) {
-                mParameters.set("low-power-mode", "enable");
-            } else {
-                mParameters.set("low-power-mode", "disable");
-            }
-        }
-    }
-
 }
