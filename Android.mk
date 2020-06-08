@@ -1,3 +1,4 @@
+ifeq ($(TARGET_FWK_SUPPORTS_FULL_VALUEADDS),true)
 LOCAL_PATH:= $(call my-dir)
 
 include $(CLEAR_VARS)
@@ -34,9 +35,7 @@ LOCAL_PRIVATE_PLATFORM_APIS:=true
 LOCAL_RENDERSCRIPT_TARGET_API := 23
 
 #Do not override for targets using vanilla AOSP
-ifneq ($(TARGET_USES_AOSP),true)
 LOCAL_OVERRIDES_PACKAGES := Camera2
-endif
 
 LOCAL_PROGUARD_FLAG_FILES := proguard.flags
 
@@ -53,3 +52,4 @@ endif
 include $(BUILD_PACKAGE)
 
 include $(call all-makefiles-under, $(LOCAL_PATH))
+endif

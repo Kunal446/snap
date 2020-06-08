@@ -147,6 +147,12 @@ public class SettingsActivity extends PreferenceActivity {
                     updatePreferenceButton(dependentKey);
                 }
             }
+            if (key.equals(SettingsManager.KEY_CAPTURE_MFNR_VALUE) ) {
+                if(isMFNREnabled()){
+                    ListPreference manualexp = (ListPreference) findPreference(SettingsManager.KEY_MANUAL_EXPOSURE);
+                    manualexp.setEnabled(false);
+                }
+            }
         }
     };
 
@@ -1009,7 +1015,7 @@ public class SettingsActivity extends PreferenceActivity {
                 add(SettingsManager.KEY_SATURATION_LEVEL);
                 add(SettingsManager.KEY_ANTI_BANDING_LEVEL);
                 add(SettingsManager.KEY_STATS_VISUALIZER_VALUE);
-                add(SettingsManager.KEY_SAVERAW);
+//                add(SettingsManager.KEY_SAVERAW);
                 add(SettingsManager.KEY_AUTO_HDR);
                 add(SettingsManager.KEY_MANUAL_EXPOSURE);
                 add(SettingsManager.KEY_SHARPNESS_CONTROL_MODE);

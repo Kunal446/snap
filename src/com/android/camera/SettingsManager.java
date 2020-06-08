@@ -671,8 +671,8 @@ public class SettingsManager implements ListMenu.SettingsListener {
             String newValue = null;
             try {
                 newValue = dependencyList.getString(keyToProcess);
-            } catch (JSONException e) {
-                Log.w(TAG, "initializeValueMap JSONException No value for:" + keyToProcess);
+            } catch (JSONException | NullPointerException e) {
+                Log.w(TAG, "initializeValueMap Exception No value for:" + keyToProcess);
                 continue;
             }
             Values values = new Values(getValue(keyToProcess), newValue);
