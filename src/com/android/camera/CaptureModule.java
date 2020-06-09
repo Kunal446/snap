@@ -4426,6 +4426,7 @@ public class CaptureModule implements CameraModule, PhotoController,
         mFirstPreviewLoaded = false;
         if (isExitCamera && mIsCloseCamera) {
             stopBackgroundThread();
+            closeImageReader();
         }
         setProModeVisible();
         closeVideoFileDescriptor();
@@ -4434,7 +4435,6 @@ public class CaptureModule implements CameraModule, PhotoController,
             mActivity.setResultEx(Activity.RESULT_CANCELED, new Intent());
             mActivity.finish();
         }
-        closeImageReader();
         mJpegImageData = null;
     }
 
@@ -8899,8 +8899,17 @@ public class CaptureModule implements CameraModule, PhotoController,
     }
 
     private byte[] getJpegData(Image image) {
+        if (DEBUG) {
+            Log.v(TAG, "getJpegData image :" + image);
+        }
         ByteBuffer buffer = image.getPlanes()[0].getBuffer();
+        if (DEBUG) {
+            Log.v(TAG, "getJpegData buffer :" + buffer);
+        }
         byte[] bytes = new byte[buffer.remaining()];
+        if (DEBUG) {
+            Log.v(TAG, "getJpegData bytes :" + bytes);
+        }
         buffer.get(bytes);
         return bytes;
     }
