@@ -2884,6 +2884,9 @@ public class CaptureModule implements CameraModule, PhotoController,
             CaptureRequest.Builder captureBuilder = getRequestBuilder(
                     CameraDevice.TEMPLATE_STILL_CAPTURE,id);
 
+            if(mLockAFAE){
+                applySettingsForLockExposure(captureBuilder, id);
+            }
             if (mSettingsManager.isZSLInHALEnabled() || isActionImageCapture()) {
                 captureBuilder.set(CaptureRequest.CONTROL_ENABLE_ZSL, true);
             } else {
