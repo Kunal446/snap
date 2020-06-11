@@ -8473,7 +8473,9 @@ public class CaptureModule implements CameraModule, PhotoController,
         }
         if(mLockAFAE) {
             mLockAFAE = false;
-            applySettingsForUnlockExposure(mPreviewRequestBuilder[mCurrentSceneMode.getCurrentId()], mCurrentSceneMode.getCurrentId());
+            if(mPreviewRequestBuilder[CURRENT_ID] != null){
+                applySettingsForUnlockExposure(mPreviewRequestBuilder[CURRENT_ID], CURRENT_ID);
+            }
             updateLockAFAEVisibility();
         }
         onPauseBeforeSuper();
