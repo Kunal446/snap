@@ -2944,7 +2944,6 @@ public class CaptureModule implements CameraModule, PhotoController,
 
             CaptureRequest.Builder captureBuilder = getRequestBuilder(
                     CameraDevice.TEMPLATE_STILL_CAPTURE,id);
-
             if(mLockAFAE){
                 applySettingsForLockExposure(captureBuilder, id);
             }
@@ -3853,15 +3852,19 @@ public class CaptureModule implements CameraModule, PhotoController,
             if(!mLockAFAE) {
                 mControlAFMode = CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE;
                 mIsAutoFocusStarted = false;
+            }
+            applyFlash(mPreviewRequestBuilder[id], id);
+            if(!mLockAFAE) {
                 applySettingsForUnlockExposure(mPreviewRequestBuilder[id], id);
+            }
+            if (mSettingsManager.isDeveloperEnabled()) {
+                applyCommonSettings(mPreviewRequestBuilder[id], id);
+            }
+            if(!mLockAFAE) {
                 int afMode = (mSettingsManager.isDeveloperEnabled() && getDevAfMode() != -1) ?
                         getDevAfMode() : mControlAFMode;
                 setAFModeToPreview(id, mUI.getCurrentProMode() == ProMode.MANUAL_MODE ?
                         CaptureRequest.CONTROL_AF_MODE_OFF : afMode);
-            }
-            applyFlash(mPreviewRequestBuilder[id], id);
-            if (mSettingsManager.isDeveloperEnabled()) {
-                applyCommonSettings(mPreviewRequestBuilder[id], id);
             }
             mTakingPicture[id] = false;
             enableShutterAndVideoOnUiThread(id,false);
