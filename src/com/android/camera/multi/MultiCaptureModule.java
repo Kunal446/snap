@@ -103,6 +103,8 @@ public class MultiCaptureModule implements MultiCamera {
     private Handler mCameraHandler;
     private HandlerThread mCameraThread;
 
+    private boolean mPaused = true;
+
     private static final CaptureRequest.Key<Byte> override_resource_cost_validation =
             new CaptureRequest.Key<>(
                     "org.codeaurora.qcamera3.sessionParameters.overrideResourceCostValidation",
@@ -154,6 +156,7 @@ public class MultiCaptureModule implements MultiCamera {
         if (mSoundPlayer == null) {
             mSoundPlayer = SoundClips.getPlayer(mActivity);
         }
+        mPaused = false;
         startBackgroundThread();
         initCameraCharacteristics();
         for (String id : ids) {
@@ -167,6 +170,7 @@ public class MultiCaptureModule implements MultiCamera {
 
     @Override
     public void onPause() {
+        mPaused = true;
         if (mSoundPlayer != null) {
             mSoundPlayer.release();
             mSoundPlayer = null;
@@ -438,6 +442,14 @@ public class MultiCaptureModule implements MultiCamera {
                     new CameraCaptureSession.StateCallback() {
                         @Override
                         public void onConfigured(CameraCaptureSession cameraCaptureSession) {
+                            if (mPaused || null == mCameraDevices[id] ||
+                                    cameraCaptureSession == null) {
+                                return;
+                            }
+                            int lastId = Integer.parseInt(mCameraIDList.get(mCameraIDList.size() -1));
+                            if (id == lastId) {
+                                mMultiCameraModule.setCameraModeSwitcherAllowed(true);
+                            }
                             // The camera is already closed
                             if (null == mCameraDevices[id]) {
                                 return;
@@ -635,6 +647,9 @@ public class MultiCaptureModule implements MultiCamera {
         for (String id : ids) {
             try {
                 int cameraId = Integer.parseInt(id);
+                if (mCameraDevices[cameraId] == null) {
+                    return;
+                }
                 final CaptureRequest.Builder captureBuilder =
                         mCameraDevices[cameraId].createCaptureRequest(
                                 CameraDevice.TEMPLATE_STILL_CAPTURE);

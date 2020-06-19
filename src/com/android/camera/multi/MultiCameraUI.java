@@ -370,12 +370,27 @@ public class MultiCameraUI implements PreviewGestures.SingleTapListener,
         }
     }
 
+    public void showModeSelectLayout(boolean enable) {
+        if (mModeSelectLayout != null) {
+            mModeSelectLayout.setVisibility(enable ? View.VISIBLE : View.GONE);
+        }
+    }
+
     /**
      * Enables or disables the shutter button.
      */
     public void enableShutter(boolean enabled) {
         if (mShutterButton != null) {
             mShutterButton.setEnabled(enabled);
+        }
+    }
+
+    /**
+     * Enables or disables the Video button.
+     */
+    public void enableVideoBtn(boolean enabled) {
+        if (mVideoButton != null) {
+            mVideoButton.setEnabled(enabled);
         }
     }
 
@@ -432,7 +447,7 @@ public class MultiCameraUI implements PreviewGestures.SingleTapListener,
     }
 
     public void swipeCameraMode(int move) {
-        if (!mModule.getCameraModeSwitcherAllowed()) {
+        if (mModule.isRecordingVideo() || !mModule.getCameraModeSwitcherAllowed() ) {
             return;
         }
         int index = mModule.getCurrentModeIndex() + move;
