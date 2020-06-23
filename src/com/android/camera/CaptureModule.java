@@ -1555,7 +1555,7 @@ public class CaptureModule implements CameraModule, PhotoController,
 
     private void initModeByIntent() {
         String action = mActivity.getIntent().getAction();
-        Log.v(TAG, " initModeByIntent: " + action);
+        Log.v(TAG, " initModeByIntent action: " + action);
         Bundle bundle = mActivity.getIntent().getExtras();
         if (bundle != null) {
             Log.v(TAG, " initModeByIntent bundle :" + bundle.toString());
@@ -1564,8 +1564,8 @@ public class CaptureModule implements CameraModule, PhotoController,
             mIntentMode = INTENT_MODE_STILL_IMAGE_CAMERA;
             Set<String> categories = mActivity.getIntent().getCategories();
             if (categories != null) {
-                for(String categorie: categories) {
-                    Log.v(TAG, " initModeByIntent categorie :" + categorie);
+                for(String categorie: categories){
+                    Log.v(TAG, " categorie :" + categorie);
                     if(categorie.equals("android.intent.category.VOICE")) {
                         mIsVoiceTakePhote = true;
                     }
@@ -1576,8 +1576,8 @@ public class CaptureModule implements CameraModule, PhotoController,
             if (isOpenOnly) {
                 mIsVoiceTakePhote = false;
             }
-            Log.v(TAG, " initModeByIntent isOpenOnly :" + isOpenOnly + ", mIsVoiceTakePhote :"
-                    + mIsVoiceTakePhote);
+            Log.v(TAG, "initModeByIntent  CAMERA_OPEN_ONLY isOpenOnly :" + isOpenOnly +
+                    ", mIsVoiceTakePhote :" + mIsVoiceTakePhote);
         }
         if (MediaStore.ACTION_IMAGE_CAPTURE.equals(action)) {
             mIntentMode = INTENT_MODE_CAPTURE;
@@ -2456,7 +2456,6 @@ public class CaptureModule implements CameraModule, PhotoController,
                                                         orientation, exif, mOnMediaSavedListener, mContentResolver, "jpeg");
                                             } else {
                                                 if (mIntentMode == INTENT_MODE_STILL_IMAGE_CAMERA) {
-                                                    title = title + "\\";
                                                     mIntentMode = INTENT_MODE_NORMAL;
                                                 }
                                                 mActivity.getMediaSaveService().addImage(bytes, title, date,
