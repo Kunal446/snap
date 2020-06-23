@@ -1317,14 +1317,13 @@ public class CaptureModule implements CameraModule, PhotoController,
         @Override
         public void onOpened(CameraDevice cameraDevice) {
             int id = Integer.parseInt(cameraDevice.getId());
-            Log.d(TAG, "onOpened " + id);
+            mCameraDevice[id] = cameraDevice;
+            mCameraOpened[id] = true;
             mCameraOpenCloseLock.release();
+            Log.d(TAG, "onOpened " + id);
             if (mPaused) {
                 return;
             }
-
-            mCameraDevice[id] = cameraDevice;
-            mCameraOpened[id] = true;
 
             if (isBackCamera() && getCameraMode() == DUAL_MODE && id == BAYER_ID) {
                 Message msg = mCameraHandler.obtainMessage(OPEN_CAMERA, MONO_ID, 0);
@@ -4025,12 +4024,12 @@ public class CaptureModule implements CameraModule, PhotoController,
 
         try {
             // Close camera starting with AUX first
+            if (!mCameraOpenCloseLock.tryAcquire(2000, TimeUnit.MILLISECONDS)) {
+                Log.d(TAG, "Time out waiting to lock camera closing.");
+                throw new RuntimeException("Time out waiting to lock camera closing");
+            }
             for (int i = MAX_NUM_CAM-1; i >= 0; i--) {
                 if (null != mCameraDevice[i]) {
-                    if (!mCameraOpenCloseLock.tryAcquire(2000, TimeUnit.MILLISECONDS)) {
-                        Log.d(TAG, "Time out waiting to lock camera closing.");
-                        throw new RuntimeException("Time out waiting to lock camera closing");
-                    }
                     Log.d(TAG, "Closing camera: " + mCameraDevice[i].getId());
 
                     // session was closed here if intentMode is INTENT_MODE_VIDEO
