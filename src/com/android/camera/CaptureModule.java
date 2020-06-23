@@ -1868,7 +1868,8 @@ public class CaptureModule implements CameraModule, PhotoController,
         }
     }
 
-    private void updatePreviewSurfaceReadyState(boolean rdy) {
+    private void
+    updatePreviewSurfaceReadyState(boolean rdy) {
         if (rdy != mSurfaceReady) {
             if (rdy) {
                 Log.i(TAG, "Preview Surface is ready!");
@@ -8507,12 +8508,6 @@ public class CaptureModule implements CameraModule, PhotoController,
     }
 
     public void restartAll() {
-        if(isBackCamera()){
-            CURRENT_ID=1;
-        }
-        if(!isBackCamera()){
-            CURRENT_ID=0;
-        }
         int nextCameraId = getNextScreneModeId(mNextModeIndex);
         Log.d(TAG, "restart all CURRENT_ID :" + CURRENT_ID + " nextCameraId :" + nextCameraId);
         if(CURRENT_ID == nextCameraId){
