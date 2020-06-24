@@ -577,12 +577,7 @@ public class SettingsManager implements ListMenu.SettingsListener {
                     mCharacteristics.get(mCameraId).get(CaptureModule.is_camera_fd_supported) == 1;
         } catch (IllegalArgumentException e){
             Log.d(TAG,"isVideoFDSupported no vendor tag");
-            if (CaptureModule.CURRENT_MODE == CaptureModule.CameraMode.RTB ||
-            CaptureModule.CURRENT_MODE == CaptureModule.CameraMode.SAT){
-                isCameraFDSupported = false;
-            } else {
-                isCameraFDSupported = true;
-            }
+            isCameraFDSupported = true;
         }
         return isCameraFDSupported;
     }
