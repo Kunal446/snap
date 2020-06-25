@@ -413,6 +413,12 @@ public class CaptureModule implements CameraModule, PhotoController,
             new CaptureRequest.Key<>("org.codeaurora.qcamera3.facial_attr.blink_enable",
                     Byte.class);
 
+    // SAT/BOKEN zoom ration
+    public static CameraCharacteristics.Key<float[]> ZOOM_RATION_RANGE =
+            new CameraCharacteristics.Key<>("org.quic.camera2.ZoomRatio.ZoomRatioRange", float[].class);
+    private static final CaptureRequest.Key<Float> zoom_ration =
+            new CaptureRequest.Key<>("org.quic.camera2.ZoomRatio.ZoomRatio", Float.class);
+
     public static CaptureResult.Key<Integer> ssmCaptureComplete =
             new CaptureResult.Key<>("com.qti.chi.superslowmotionfrc.CaptureComplete", Integer.class);
     public static CaptureResult.Key<Integer> ssmProcessingComplete =
@@ -3285,7 +3291,11 @@ public class CaptureModule implements CameraModule, PhotoController,
             captureBuilder.set(CaptureRequest.JPEG_THUMBNAIL_SIZE, mVideoSnapshotThumbSize);
             captureBuilder.set(CaptureRequest.JPEG_THUMBNAIL_QUALITY, (byte)80);
             applyVideoSnapshot(captureBuilder, id);
-            applyZoom(captureBuilder, id);
+            if (mUI.getZoomFixedSupport()) {
+                applyZoomRatio(captureBuilder, mZoomValue, id);
+            } else {
+                applyZoom(captureBuilder, id);
+            }
             if (mHighSpeedCapture) {
                 captureBuilder.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,
                         mHighSpeedFPSRange);
@@ -4165,7 +4175,11 @@ public class CaptureModule implements CameraModule, PhotoController,
         applyIso(builder);
         applyColorEffect(builder);
         applySceneMode(builder);
-        applyZoom(builder, id);
+        if (mUI.getZoomFixedSupport()) {
+            applyZoomRatio(builder, mZoomValue, id);
+        } else {
+            applyZoom(builder, id);
+        }
         applyInstantAEC(builder);
         applySaturationLevel(builder);
         applyAntiBandingLevel(builder);
@@ -5463,6 +5477,7 @@ public class CaptureModule implements CameraModule, PhotoController,
 
     private void updateVideoSnapshotSize() {
         mVideoSnapshotSize = mVideoSize;
+        if (mVideoSize == null) return;
         if (!is4kSize(mVideoSize) && (mHighSpeedCaptureRate == 0)) {
             mVideoSnapshotSize = getMaxPictureSizeLiveshot();
         }
@@ -5542,9 +5557,9 @@ public class CaptureModule implements CameraModule, PhotoController,
     private void updateZoom() {
         String zoomStr = mSettingsManager.getValue(SettingsManager.KEY_ZOOM);
         int zoom = Integer.parseInt(zoomStr);
-        if ( zoom !=0 ) {
-            mZoomValue = (float)zoom;
-        }else{
+        if (zoom != 0) {
+            mZoomValue = (float) zoom;
+        } else {
             mZoomValue = 1.0f;
         }
         mUI.updateZoomSeekBar(mZoomValue);
@@ -6080,7 +6095,11 @@ public class CaptureModule implements CameraModule, PhotoController,
         applyColorEffect(builder);
         applyVideoFlash(builder, cameraId);
         applyFaceDetection(builder);
-        applyZoom(builder, cameraId);
+        if (mUI.getZoomFixedSupport()) {
+            applyZoomRatio(builder, mZoomValue, cameraId);
+        } else {
+            applyZoom(builder, cameraId);
+        }
         applyVideoEncoderProfile(builder);
         applyVideoEIS(builder);
         applyVideoHDR(builder);
@@ -7086,6 +7105,15 @@ public class CaptureModule implements CameraModule, PhotoController,
         return mCropRegion[id];
     }
 
+    private void applyZoomRatio(CaptureRequest.Builder request, float zoomValue, int id) {
+        try {
+            cropRegionForZoom(id);
+            request.set(zoom_ration, zoomValue);
+        } catch(IllegalArgumentException e) {
+            Log.v(TAG, " there is no vendorTag zoom_ration");
+        }
+    }
+
     private void applyZoom(CaptureRequest.Builder request, int id) {
         if (!mSupportZoomCapture) return;
         request.set(CaptureRequest.SCALER_CROP_REGION, cropRegionForZoom(id));
@@ -7465,7 +7493,11 @@ public class CaptureModule implements CameraModule, PhotoController,
         if (mState[id] == STATE_PREVIEW) {
             cancelTouchFocus(id);
         }
-        applyZoom(mPreviewRequestBuilder[id], id);
+        if (mUI.getZoomFixedSupport()) {
+            applyZoomRatio(mPreviewRequestBuilder[id], mZoomValue, id);
+        } else {
+            applyZoom(mPreviewRequestBuilder[id], id);
+        }
         try {
             if(id == MONO_ID && !canStartMonoPreview()) {
                 mCaptureSession[id].capture(mPreviewRequestBuilder[id]
@@ -9059,7 +9091,6 @@ public class CaptureModule implements CameraModule, PhotoController,
             restartAll();
         }
         updateZoomSeekBarVisible();
-        mUI.updateZoomSeekBar(1.0f);
         updateZoom();
         return 1;
     }
@@ -9067,6 +9098,20 @@ public class CaptureModule implements CameraModule, PhotoController,
     public void updateZoomSeekBarVisible() {
         if (mCurrentSceneMode.mode == CameraMode.PRO_MODE ||
                 mCurrentSceneMode.mode == CameraMode.RTB || mIsRTBCameraId) {
+            if (mCurrentSceneMode.mode == CameraMode.RTB) {
+                float[] zoomRatioRange = mSettingsManager.getSupportedRatioZoomRange(
+                        getMainCameraId());
+                if (zoomRatioRange != null && zoomRatioRange[0] == zoomRatioRange[1]) {
+                    mZoomValue = zoomRatioRange[0];
+                    Log.v(TAG, "updateZoomSeekBarVisible mZoomValue :" + mZoomValue);
+                    mUI.hideZoomSeekBar();
+                    return;
+                } else if (zoomRatioRange != null && zoomRatioRange[0] != zoomRatioRange[1]) {
+                    mUI.showZoomSeekBar();
+                    Log.v(TAG, "updateZoomSeekBarVisible showZoomSeekBar");
+                    return;
+                }
+            }
             mUI.hideZoomSeekBar();
         } else {
             mUI.showZoomSeekBar();

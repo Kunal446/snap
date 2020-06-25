@@ -2291,6 +2291,25 @@ public class SettingsManager implements ListMenu.SettingsListener {
         return supported;
     }
 
+    public float[] getSupportedRatioZoomRange(int cameraId) {
+        float[] result = new float[2];
+        try {
+            result = mCharacteristics.get(cameraId).get(CaptureModule.ZOOM_RATION_RANGE);
+            if (result == null) {
+                return null;
+            }
+            Log.v(TAG, " getSupportedRatioZoomRange id " + cameraId + ", min :"+ result[0] +
+                    ", zoom max :" + result[1]);
+        } catch(IllegalArgumentException e) {
+            result = null;
+            Log.w(TAG, "getSupportedRatioZoomRange occurs IllegalArgumentException");
+        } catch(NoSuchFieldError e) {
+            result = null;
+            Log.w(TAG, "getSupportedRatioZoomRange NoSuchFieldError CONTROL_ZOOM_RATIO_RANGE");
+        }
+        return result;
+    }
+
     private void resetIfInvalid(ListPreference pref) {
         // Set the value to the first entry if it is invalid.
         String value = pref.getValue();
