@@ -1783,6 +1783,11 @@ public class CaptureModule implements CameraModule, PhotoController,
         if (valueF < 0) return;
         builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
         builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, valueF);
+        if(mLockAFAE){
+            mLockAFAE = false;
+            applySettingsForUnlockExposure(builder, mCurrentSceneMode.getCurrentId());
+            updateLockAFAEVisibility();
+        }
     }
 
     private void createSessions() {
@@ -1853,8 +1858,7 @@ public class CaptureModule implements CameraModule, PhotoController,
         }
     }
 
-    private void
-    updatePreviewSurfaceReadyState(boolean rdy) {
+    private void updatePreviewSurfaceReadyState(boolean rdy) {
         if (rdy != mSurfaceReady) {
             if (rdy) {
                 Log.i(TAG, "Preview Surface is ready!");
@@ -2771,13 +2775,19 @@ public class CaptureModule implements CameraModule, PhotoController,
         try {
             CaptureRequest.Builder builder = getRequestBuilder(id);
             builder.setTag(id);
+            if (!mLockAFAE) {
+                applySettingsForLockFocus(builder, id);
+            }
             addPreviewSurface(builder, null, id);
-
-            applySettingsForLockFocus(builder, id);
             CaptureRequest request = builder.build();
-            mLockRequestHashCode[id] = request.hashCode();
+            if (!mLockAFAE) {
+                mLockRequestHashCode[id] = request.hashCode();
+                mCaptureSession[id].capture(request, mCaptureCallback, mCameraHandler);
+            }else{
+                mLockRequestHashCode[id] = 0;
+            }
             mState[id] = STATE_WAITING_AF_LOCK;
-            mCaptureSession[id].capture(request, mCaptureCallback, mCameraHandler);
+
             if (mHiston) {
                 updateGraghViewVisibility(View.INVISIBLE);
             }
@@ -2884,6 +2894,9 @@ public class CaptureModule implements CameraModule, PhotoController,
             CaptureRequest.Builder captureBuilder = getRequestBuilder(
                     CameraDevice.TEMPLATE_STILL_CAPTURE,id);
 
+            if(mLockAFAE){
+                applySettingsForLockExposure(captureBuilder, id);
+            }
             if (mSettingsManager.isZSLInHALEnabled() || isActionImageCapture()) {
                 captureBuilder.set(CaptureRequest.CONTROL_ENABLE_ZSL, true);
             } else {
@@ -4290,6 +4303,7 @@ public class CaptureModule implements CameraModule, PhotoController,
             if(mLockAFAE) {
                 mLockAFAE = false;
                 updateLockAFAEVisibility();
+                mUI.initFlashButton();
             }
         }
         if (mLocationManager != null) mLocationManager.recordLocation(false);
@@ -4987,6 +5001,7 @@ public class CaptureModule implements CameraModule, PhotoController,
             cancelTouchFocus(mCurrentSceneMode.getCurrentId());
             applySettingsForUnlockExposure(mPreviewRequestBuilder[mCurrentSceneMode.getCurrentId()], mCurrentSceneMode.getCurrentId());
             updateLockAFAEVisibility();
+            mUI.initFlashButton();
         }
         int[] newXY = {x, y};
         if (mUI.isOverControlRegion(newXY)) return;
@@ -5017,6 +5032,7 @@ public class CaptureModule implements CameraModule, PhotoController,
 
         mClickPosition[0] = x;
         mClickPosition[1] = y;
+        mUI.hideFlashButton();
         int[] newXY = {x, y};
         if (mUI.isOverControlRegion(newXY)) return;
         if (!mUI.isOverSurfaceView(newXY)) return;
@@ -8431,6 +8447,12 @@ public class CaptureModule implements CameraModule, PhotoController,
     }
 
     public void restartAll() {
+        if(isBackCamera()){
+            CURRENT_ID=1;
+        }
+        if(!isBackCamera()){
+            CURRENT_ID=0;
+        }
         int nextCameraId = getNextScreneModeId(mNextModeIndex);
         Log.d(TAG, "restart all CURRENT_ID :" + CURRENT_ID + " nextCameraId :" + nextCameraId);
         if(CURRENT_ID == nextCameraId){
