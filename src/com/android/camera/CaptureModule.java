@@ -1847,8 +1847,6 @@ public class CaptureModule implements CameraModule, PhotoController,
                     e.printStackTrace();
                 }
             }
-        }else if(!mSurfaceReady){
-            mSurfaceReadyLock.release();
         }
     }
 
