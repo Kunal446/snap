@@ -7586,8 +7586,16 @@ public class CaptureModule implements CameraModule, PhotoController,
                     session.setRepeatingBurst(createSSMBatchRequest(mPreviewRequestBuilder[id]),
                             mCaptureCallback, mCameraHandler);
                 } else {
-                    mCaptureSession[id].setRepeatingRequest(mPreviewRequestBuilder[id]
-                            .build(), mCaptureCallback, mCameraHandler);
+                    int preivewFPS = mSettingsManager.getVideoPreviewFPS(mVideoSize,
+                        mSettingsManager.getVideoFPS());
+                    if (preivewFPS == 30 && mCurrentSceneMode.mode == CameraMode.VIDEO) {
+                        List list = CameraUtil
+                            .createHighSpeedRequestList(mVideoRecordRequestBuilder.build());
+                        session.setRepeatingBurst(list, mCaptureCallback, mCameraHandler);
+                    } else {
+                        session.setRepeatingRequest(mPreviewRequestBuilder[id]
+                                .build(), mCaptureCallback, mCameraHandler);
+                    }
                 }
 
             }
