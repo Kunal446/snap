@@ -2181,15 +2181,6 @@ public class CaptureModule implements CameraModule, PhotoController,
             setUpVideoCaptureRequestBuilder(mVideoRecordRequestBuilder, cameraId);
             mPreviewRequestBuilder[cameraId] = mVideoRecordRequestBuilder;
             mIsPreviewingVideo = true;
-            //add for mctf tag
-            if(mSettingsManager.isSwMctfSupported()){
-                int mctfVaule = SystemProperties.getInt("persist.sys.camera.sessionParameters.mctf", 0);
-                try {
-                    mVideoRecordRequestBuilder.set(CaptureModule.mctf, (byte)(mctfVaule == 1 ? 0x01 : 0x00));
-                } catch (IllegalArgumentException e) {
-                    Log.d(TAG, "mctf no vendor tag");
-                }
-            }
             if (ApiHelper.isAndroidPOrHigher()) {
                 if (isHighSpeedRateCapture()) {
                     int optionMode = isSSMEnabled() ? STREAM_CONFIG_SSM : SESSION_HIGH_SPEED;
@@ -4175,6 +4166,19 @@ public class CaptureModule implements CameraModule, PhotoController,
 
     private void applySessionParameters(CaptureRequest.Builder builder){
         applyEarlyPCR(builder);
+        applyMctf(builder);
+    }
+
+    private void applyMctf(CaptureRequest.Builder builder){
+        //add for mctf tag
+        if(mSettingsManager.isSwMctfSupported() && (mCurrentSceneMode.mode == CameraMode.VIDEO || mCurrentSceneMode.mode == CameraMode.HFR)){
+            int mctfVaule = SystemProperties.getInt("persist.sys.camera.sessionParameters.mctf", 0);
+            try {
+                builder.set(CaptureModule.mctf, (byte)(mctfVaule == 1 ? 0x01 : 0x00));
+            } catch (IllegalArgumentException e) {
+                Log.d(TAG, "mctf no vendor tag");
+            }
+        }
     }
 
     private void applyCommonSettings(CaptureRequest.Builder builder, int id) {
