@@ -600,6 +600,19 @@ public class SettingsManager implements ListMenu.SettingsListener {
         return supportted;
     }
 
+    public boolean isSwMctfSupported() {
+        boolean supportted = false;
+        try {
+            supportted =
+                    (mCharacteristics.get(mCameraId).get(CaptureModule.swmctf) == 1);
+        } catch (IllegalArgumentException e) {
+            Log.d(TAG, "swmctf no vendor tag");
+            supportted = true;
+        }
+        Log.i(TAG,"isSwMctfSupported:" + supportted);
+        return supportted;
+    }
+
     public boolean isCameraFDSupported(){
         boolean isCameraFDSupported = false;
         isCameraFDSupported = PersistUtil.isCameraFDSupported();
@@ -2289,6 +2302,25 @@ public class SettingsManager implements ListMenu.SettingsListener {
             supported.add(String.valueOf(zoomLevel));
         }
         return supported;
+    }
+
+    public float[] getSupportedRatioZoomRange(int cameraId) {
+        float[] result = new float[2];
+        try {
+            result = mCharacteristics.get(cameraId).get(CaptureModule.ZOOM_RATION_RANGE);
+            if (result == null) {
+                return null;
+            }
+            Log.v(TAG, " getSupportedRatioZoomRange id " + cameraId + ", min :"+ result[0] +
+                    ", zoom max :" + result[1]);
+        } catch(IllegalArgumentException e) {
+            result = null;
+            Log.w(TAG, "getSupportedRatioZoomRange occurs IllegalArgumentException");
+        } catch(NoSuchFieldError e) {
+            result = null;
+            Log.w(TAG, "getSupportedRatioZoomRange NoSuchFieldError CONTROL_ZOOM_RATIO_RANGE");
+        }
+        return result;
     }
 
     private void resetIfInvalid(ListPreference pref) {
