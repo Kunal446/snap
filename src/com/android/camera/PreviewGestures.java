@@ -16,6 +16,7 @@
 
 package com.android.camera;
 
+import android.graphics.Point;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
@@ -62,6 +63,7 @@ public class PreviewGestures
     private MultiCameraUI mMultiCameraUI;
     private PhotoMenu mPhotoMenu;
     private VideoMenu mVideoMenu;
+    private Point mScreenSize;
     private boolean waitUntilNextDown;
     private boolean setToFalse;
 
@@ -119,7 +121,14 @@ public class PreviewGestures
                 }
                 if (isUpSwipe(orientation, deltaX, deltaY) ||
                         isDownSwipe(orientation, deltaX, deltaY)) {
-                    if (e1.getY() < 200) {
+                    int bottom = mScreenSize.y - 200;
+                    Log.d("ZJJ","bottom = "+ bottom);
+                    if (mCaptureUI != null) {
+                        bottom = mCaptureUI.getPreviewBottom();
+                        Log.d("ZJJ","preview bottom = "+ bottom);
+                    }
+                    Log.d("ZJJ","event Y= "+e1.getY());
+                    if (e1.getY() < 200 || e1.getY() > bottom) {
                         return false;
                     }
                     waitUntilNextDown = true;
@@ -203,6 +212,8 @@ public class PreviewGestures
         mScale = new ScaleGestureDetector(ctx, this);
         mEnabled = true;
         mGestureDetector = new GestureDetector(mGestureListener);
+        mScreenSize = new Point(0,0);
+        ctx.getWindowManager().getDefaultDisplay().getSize(mScreenSize);
     }
 
     public void setRenderOverlay(RenderOverlay overlay) {
