@@ -197,9 +197,16 @@ public class SettingsActivity extends PreferenceActivity {
                 }
 
                 if(pref.getKey().equals(SettingsManager.KEY_VIDEO_QUALITY) ||
-                   pref.getKey().equals(SettingsManager.KEY_VIDEO_HIGH_FRAME_RATE)){
+                        pref.getKey().equals(SettingsManager.KEY_VIDEO_HIGH_FRAME_RATE)) {
                     updateEISPreference();
+                    updatePreference(SettingsManager.KEY_VIDEO_HIGH_FRAME_RATE);
+                    ListPreference hfrPref = (ListPreference) findPreference(
+                            SettingsManager.KEY_VIDEO_HIGH_FRAME_RATE);
+                    if (hfrPref != null) {
+                        hfrPref.setEnabled(hfrPref.getEntries().length > 1);
+                    }
                 }
+
                 if(pref.getKey().equals(SettingsManager.KEY_RAW_FORMAT_TYPE) ||
                    pref.getKey().equals(SettingsManager.KEY_RAWINFO_TYPE)){
                     if(mSettingsManager.getValue(SettingsManager.KEY_SAVERAW).equals("disable")){

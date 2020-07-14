@@ -1524,7 +1524,7 @@ public class SettingsManager implements ListMenu.SettingsListener {
         }
     }
 
-    private void filterHFROptions() {
+    public void filterHFROptions() {
         ListPreference hfrPref = mPreferenceGroup.findPreference(KEY_VIDEO_HIGH_FRAME_RATE);
         if (hfrPref != null) {
             hfrPref.reloadInitialEntriesAndEntryValues();
