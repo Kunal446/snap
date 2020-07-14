@@ -285,7 +285,7 @@ public class SettingsManager implements ListMenu.SettingsListener {
         KEY_ISO_INDEX.put(MAUNAL_ABSOLUTE_ISO_VALUE, 8);
         Set<String> h265 = new HashSet<>();
         h265.add("HEVCProfileMain10");
-        h265.add("HEVCProfileMain10HDR10");
+        //h265.add("HEVCProfileMain10HDR10");
         VIDEO_ENCODER_PROFILE_TABLE.put("h265", h265);
     }
 
