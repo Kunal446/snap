@@ -419,6 +419,8 @@ public class CaptureModule implements CameraModule, PhotoController,
     private static final CaptureRequest.Key<Float> zoom_ration =
             new CaptureRequest.Key<>("org.quic.camera2.ZoomRatio.ZoomRatio", Float.class);
 
+    public static CaptureRequest.Key<Byte> isAfLock =
+            new CaptureRequest.Key<>("org.quic.camera2.statsconfigs.isAFLock", Byte.class);
     public static CaptureResult.Key<Integer> ssmCaptureComplete =
             new CaptureResult.Key<>("com.qti.chi.superslowmotionfrc.CaptureComplete", Integer.class);
     public static CaptureResult.Key<Integer> ssmProcessingComplete =
@@ -2331,6 +2333,7 @@ public class CaptureModule implements CameraModule, PhotoController,
         applyAFRegions(mPreviewRequestBuilder[id], id);
         applyAERegions(mPreviewRequestBuilder[id], id);
         mPreviewRequestBuilder[id].setTag(id);
+        applyIsAfLock(mPreviewRequestBuilder[id]);
         try {
             if (isSSMEnabled() && (mIsPreviewingVideo || mIsRecordingVideo)) {
                 mCaptureSession[id].setRepeatingBurst(createSSMBatchRequest(mVideoRecordRequestBuilder),
@@ -4185,6 +4188,7 @@ public class CaptureModule implements CameraModule, PhotoController,
     private void applyCommonSettings(CaptureRequest.Builder builder, int id) {
         builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO);
         builder.set(CaptureRequest.CONTROL_AF_MODE, mControlAFMode);
+        applyIsAfLock(builder);
         applyAfModes(builder);
         applyFaceDetection(builder);
         applyTouchTrackFocus(builder);
@@ -6149,6 +6153,15 @@ public class CaptureModule implements CameraModule, PhotoController,
             } catch (IllegalArgumentException e) {
                 Log.w(TAG, "capture can`t find vendor tag: " + custom_noise_reduction.toString());
             }
+        }
+    }
+
+    private void applyIsAfLock(CaptureRequest.Builder builder){
+        try {
+            Log.v(TAG, " applyIsAfLock mLockAFAE :" + mLockAFAE);
+            builder.set(CaptureModule.isAfLock, (byte)(mLockAFAE ? 0x01 : 0x00));
+        } catch (IllegalArgumentException e) {
+            Log.w(TAG, "cannot find vendor tag: " + isAfLock.toString());
         }
     }
 
