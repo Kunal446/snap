@@ -117,6 +117,7 @@ public class MultiVideoModule implements MultiCamera, LocationManager.Listener,
     private static final int MAX_NUM_CAM = 16;
 
     private int mCameraListIndex = 0;
+    private int mLastCameraId;
 
     private static final CaptureRequest.Key<Byte> override_resource_cost_validation =
             new CaptureRequest.Key<>(
@@ -264,6 +265,7 @@ public class MultiVideoModule implements MultiCamera, LocationManager.Listener,
         for (String id : ids) {
             mCameraIDList.add(id);
         }
+        mLastCameraId = Integer.parseInt(mCameraIDList.get(mCameraIDList.size() -1));
         Message msg = Message.obtain();
         msg.what = OPEN_CAMERA;
         if (mCameraHandler != null) {
@@ -326,9 +328,28 @@ public class MultiVideoModule implements MultiCamera, LocationManager.Listener,
             Log.d(TAG, " onVideoButtonClick id :" + cameraId + "  recording is :" +
                     (mIsRecordingVideos[cameraId] ? "STOPED" : "START"));
             if (mIsRecordingVideos[cameraId]) {
+                mMultiCameraUI.enableVideoBtn(false);
                 stopRecordingVideo(cameraId);
+                Log.d(TAG, " stopRecordingVideo done id :" + cameraId);
+                if (cameraId == mLastCameraId) {
+                    mMultiCameraUI.enableVideoBtn(true);
+                    mMultiCameraUI.showModeSelectLayout(true);
+                    mMultiCameraModule.setCameraModeSwitcherAllowed(true);
+                }
             } else {
+                mMultiCameraUI.enableVideoBtn(false);
+                mMultiCameraUI.showModeSelectLayout(false);
+                mMultiCameraModule.setCameraModeSwitcherAllowed(false);
                 startRecordingVideo(cameraId);
+                if (cameraId == mLastCameraId) {
+                    mMultiCameraModule.getMainHandler().postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            mMultiCameraUI.enableVideoBtn(true);
+                        }
+                    }, 1000);
+
+                }
             }
         }
     }
@@ -364,10 +385,12 @@ public class MultiVideoModule implements MultiCamera, LocationManager.Listener,
                 int rotation = mActivity.getWindowManager().getDefaultDisplay().getRotation();
                 captureBuilder.set(CaptureRequest.JPEG_ORIENTATION,
                         CameraUtil.getJpegRotation(cameraId, rotation));
-                mCameraPreviewSessions[cameraId].capture(captureBuilder.build(),
-                        mCaptureStillCallback, mMultiCameraModule.getMyCameraHandler());
+                if (mCameraPreviewSessions[cameraId] != null) {
+                    mCameraPreviewSessions[cameraId].capture(captureBuilder.build(),
+                            mCaptureStillCallback, mMultiCameraModule.getMyCameraHandler());
+                }
                 Log.d(TAG, " cameraCaptureSession" + id + " captured ");
-            } catch (CameraAccessException e) {
+            } catch (CameraAccessException | IllegalArgumentException e) {
                 e.printStackTrace();
             }
         }
@@ -379,7 +402,9 @@ public class MultiVideoModule implements MultiCamera, LocationManager.Listener,
         mMediaRecorderPausing = true;
         for (String id : ids) {
             int cameraId = Integer.parseInt(id);
-            mMediaRecorders[cameraId].pause();
+            if (mMediaRecorders[cameraId] != null) {
+                mMediaRecorders[cameraId].pause();
+            }
         }
     }
 
@@ -765,6 +790,10 @@ public class MultiVideoModule implements MultiCamera, LocationManager.Listener,
                             if (null == mCameraDevices[id]) {
                                 return;
                             }
+
+                            if (id == mLastCameraId) {
+                                mMultiCameraModule.setCameraModeSwitcherAllowed(true);
+                            }
                             Log.v(TAG, " CameraCaptureSession onConfigured id :" + id);
                             // When the session is ready, we start displaying the preview.
                             mCameraPreviewSessions[id] = cameraCaptureSession;
@@ -955,11 +984,19 @@ public class MultiVideoModule implements MultiCamera, LocationManager.Listener,
 
                 @Override
                 public void onConfigured(CameraCaptureSession cameraCaptureSession) {
+                    if (mPaused || null == mCameraDevices[id] ||
+                            cameraCaptureSession == null) {
+                        return;
+                    }
                     mCameraPreviewSessions[id] = cameraCaptureSession;
                     updatePreview(id);
                     mActivity.runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
+                            if (mPaused || null == mCameraDevices[id] ||
+                                    cameraCaptureSession == null) {
+                                return;
+                            }
                             mIsRecordingVideos[id] = true;
                             // Start recording
                             mMediaRecorders[id].start();
@@ -981,9 +1018,11 @@ public class MultiVideoModule implements MultiCamera, LocationManager.Listener,
                     if (null != mActivity) {
                         Toast.makeText(mActivity, "Configure Failed", Toast.LENGTH_SHORT).show();
                     }
+                    mMultiCameraUI.enableVideoBtn(true);
                 }
             }, mMultiCameraModule.getMyCameraHandler());
         } catch (CameraAccessException | IllegalStateException | IOException e) {
+            mMultiCameraUI.enableVideoBtn(true);
             e.printStackTrace();
         }
     }
