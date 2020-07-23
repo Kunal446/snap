@@ -5657,11 +5657,11 @@ public class CaptureModule implements CameraModule, PhotoController,
             updateFaceDetection();
             try {
                 setUpVideoCaptureRequestBuilder(mVideoRecordRequestBuilder, cameraId);
-                mCurrentSession.setRepeatingRequest(mVideoRecordRequestBuilder.build(),
+                cameraCaptureSession.setRepeatingRequest(mVideoRecordRequestBuilder.build(),
                         mCaptureCallback, mCameraHandler);
-            } catch (CameraAccessException e) {
+            } catch (CameraAccessException e ) {
                 e.printStackTrace();
-            } catch (IllegalStateException e) {
+            } catch (IllegalStateException | NullPointerException e) {
                 e.printStackTrace();
             }
             if (!mFrameProcessor.isFrameListnerEnabled() && !startMediaRecorder()) {
