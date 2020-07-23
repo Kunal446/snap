@@ -135,7 +135,7 @@ public class MultiCameraModule implements CameraModule, PhotoController {
         if (mCurrentSceneMode.mode == mSceneCameraIds.get(mode).mode) {
             return -1;
         }
-        setCameraModeSwitcherAllowed(true);
+        setCameraModeSwitcherAllowed(false);
         setNextSceneMode(mode);
         mCurrentSceneMode = mSceneCameraIds.get(mode);
         SceneModule nextSceneMode = mSceneCameraIds.get(mode);
