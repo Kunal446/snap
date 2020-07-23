@@ -147,6 +147,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.Executor;
 import java.lang.reflect.Method;
+import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
 import androidx.heifwriter.HeifWriter;
@@ -176,6 +177,7 @@ public class CaptureModule implements CameraModule, PhotoController,
     public static final int INTENT_MODE_CAPTURE = 1;
     public static final int INTENT_MODE_VIDEO = 2;
     public static final int INTENT_MODE_CAPTURE_SECURE = 3;
+    public static final int INTENT_MODE_STILL_IMAGE_CAMERA = 4;
     private static final int BACK_MODE = 0;
     private static final int FRONT_MODE = 1;
     private static final int CANCEL_TOUCH_FOCUS_DELAY = PersistUtil.getCancelTouchFocusDelay();
@@ -369,8 +371,8 @@ public class CaptureModule implements CameraModule, PhotoController,
             new CameraCharacteristics.Key<>("org.quic.camera.MaxPreviewSize.MaxPreviewSize", int[].class);
     public static CameraCharacteristics.Key<Byte> is_burstshot_supported =
             new CameraCharacteristics.Key<>("org.quic.camera.BurstFPS.isBurstShotSupported", Byte.class);
-    public static CameraCharacteristics.Key<Integer> max_burstshot_fps =
-            new CameraCharacteristics.Key<>("org.quic.camera.BurstFPS.MaxBurstShotFPS", int.class);
+    public static CameraCharacteristics.Key<Float> max_burstshot_fps =
+            new CameraCharacteristics.Key<>("org.quic.camera.BurstFPS.MaxBurstShotFPS", Float.class);
     public static CameraCharacteristics.Key<Byte> is_liveshot_size_same_as_video =
             new CameraCharacteristics.Key<>("org.quic.camera.LiveshotSize.isLiveshotSizeSameAsVideoSize", Byte.class);
     public static CameraCharacteristics.Key<Byte> is_FD_Rendering_In_Video_UI_Supported =
@@ -409,7 +411,8 @@ public class CaptureModule implements CameraModule, PhotoController,
     public static CaptureRequest.Key<Byte> blinkEnable =
             new CaptureRequest.Key<>("org.codeaurora.qcamera3.facial_attr.blink_enable",
                     Byte.class);
-
+    public static CaptureRequest.Key<Byte> isAfLock =
+            new CaptureRequest.Key<>("org.quic.camera2.statsconfigs.isAFLock", Byte.class);
     public static CaptureResult.Key<Integer> ssmCaptureComplete =
             new CaptureResult.Key<>("com.qti.chi.superslowmotionfrc.CaptureComplete", Integer.class);
     public static CaptureResult.Key<Integer> ssmProcessingComplete =
@@ -594,6 +597,7 @@ public class CaptureModule implements CameraModule, PhotoController,
     private static final String sTempCropFilename = "crop-temp";
     private static final int REQUEST_CROP = 1000;
     private int mIntentMode = INTENT_MODE_NORMAL;
+    private boolean mIsVoiceTakePhote = false;
     private String mCropValue;
     private Uri mCurrentVideoUri;
     private boolean mTempHoldVideoInVideoIntent = false;
@@ -687,6 +691,7 @@ public class CaptureModule implements CameraModule, PhotoController,
     private static final int CLEAR_SCREEN_DELAY = 4;
     private static final int UPDATE_RECORD_TIME = 5;
     private static final int STOP_RECORD_EIS = 6;
+    private static final int VOICE_INTERACTION_CAPTURE = 7;
     private ContentValues mCurrentVideoValues;
     private String mVideoFilename;
     private boolean mMediaRecorderPausing = false;
@@ -1932,7 +1937,10 @@ public class CaptureModule implements CameraModule, PhotoController,
                                     mCaptureSession[id].setRepeatingRequest(mPreviewRequestBuilder[id]
                                             .build(), mCaptureCallback, mCameraHandler);
                                 }
-
+                                if (mIntentMode == INTENT_MODE_STILL_IMAGE_CAMERA &&
+                                        mIsVoiceTakePhote) {
+                                    mHandler.sendEmptyMessageDelayed(VOICE_INTERACTION_CAPTURE, 500);
+                                }
                                 if (isClearSightOn()) {
                                     ClearSightImageProcessor.getInstance().onCaptureSessionConfigured(id == BAYER_ID, cameraCaptureSession);
                                 } else if (mChosenImageFormat == ImageFormat.PRIVATE && id == getMainCameraId()) {
@@ -2316,6 +2324,7 @@ public class CaptureModule implements CameraModule, PhotoController,
         applyAFRegions(mPreviewRequestBuilder[id], id);
         applyAERegions(mPreviewRequestBuilder[id], id);
         mPreviewRequestBuilder[id].setTag(id);
+        applyIsAfLock(mPreviewRequestBuilder[id]);
         try {
             if (isSSMEnabled() && (mIsPreviewingVideo || mIsRecordingVideo)) {
                 mCaptureSession[id].setRepeatingBurst(createSSMBatchRequest(mVideoRecordRequestBuilder),
@@ -2568,6 +2577,30 @@ public class CaptureModule implements CameraModule, PhotoController,
 
     private void initModeByIntent() {
         String action = mActivity.getIntent().getAction();
+        Log.v(TAG, " initModeByIntent: " + action);
+        Bundle bundle = mActivity.getIntent().getExtras();
+        if (bundle != null) {
+            Log.v(TAG, " initModeByIntent bundle :" + bundle.toString());
+        }
+        if (MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA.equals(action)) {
+            mIntentMode = INTENT_MODE_STILL_IMAGE_CAMERA;
+            Set<String> categories = mActivity.getIntent().getCategories();
+            if (categories != null) {
+                for(String categorie: categories) {
+                    Log.v(TAG, " initModeByIntent categorie :" + categorie);
+                    if(categorie.equals("android.intent.category.VOICE")) {
+                        mIsVoiceTakePhote = true;
+                    }
+                }
+            }
+            boolean isOpenOnly = mActivity.getIntent().getBooleanExtra(
+                    "com.google.assistant.extra.CAMERA_OPEN_ONLY", false);
+            if (isOpenOnly) {
+                mIsVoiceTakePhote = false;
+            }
+            Log.v(TAG, " initModeByIntent isOpenOnly :" + isOpenOnly + ", mIsVoiceTakePhote :"
+                    + mIsVoiceTakePhote);
+        }
         if (MediaStore.ACTION_IMAGE_CAPTURE.equals(action)) {
             mIntentMode = INTENT_MODE_CAPTURE;
         } else if (CameraActivity.ACTION_IMAGE_CAPTURE_SECURE.equals(action)) {
@@ -2906,7 +2939,6 @@ public class CaptureModule implements CameraModule, PhotoController,
 
             CaptureRequest.Builder captureBuilder = getRequestBuilder(
                     CameraDevice.TEMPLATE_STILL_CAPTURE,id);
-
             if(mLockAFAE){
                 applySettingsForLockExposure(captureBuilder, id);
             }
@@ -3155,12 +3187,12 @@ public class CaptureModule implements CameraModule, PhotoController,
             }
         };
 
-    private int calculateMaxFps(){
-        int maxFps = mSettingsManager.getmaxBurstShotFPS();
+    private float calculateMaxFps(){
+        float maxFps = mSettingsManager.getmaxBurstShotFPS();
         if(maxFps > 0) {
             double size = mPictureSize.getWidth() * mPictureSize.getHeight();
             double maxsizefloat = mSupportedMaxPictureSize.getWidth() * mSupportedMaxPictureSize.getHeight();
-            maxFps = (int)Math.round((maxsizefloat * maxFps) / size);
+            maxFps = (float)((maxsizefloat * maxFps) / size);
             if (DEBUG) {
                 Log.i(TAG, "maxsize:" + mSupportedMaxPictureSize.getWidth() + ",height:" + mSupportedMaxPictureSize.getHeight() + "maxsize:" + maxsizefloat);
                 Log.i(TAG, "size:" + mPictureSize.getWidth() + ",height:" + mPictureSize.getHeight() + ",size:" + size);
@@ -3567,7 +3599,8 @@ public class CaptureModule implements CameraModule, PhotoController,
                                             orientation = CameraUtil.getJpegRotation(getMainCameraId(),mOrientation);
                                         }
 
-                                        if (mIntentMode != CaptureModule.INTENT_MODE_NORMAL) {
+                                        if (mIntentMode != CaptureModule.INTENT_MODE_NORMAL &&
+                                                mIntentMode != INTENT_MODE_STILL_IMAGE_CAMERA) {
                                             mJpegImageData = bytes;
                                             if (!mQuickCapture) {
                                                 showCapturedReview(bytes, orientation);
@@ -3579,6 +3612,11 @@ public class CaptureModule implements CameraModule, PhotoController,
                                             if (image.getFormat() == ImageFormat.HEIC) {
                                                 pictureFormat = "heic";
                                             }
+                                            if (mIntentMode == INTENT_MODE_STILL_IMAGE_CAMERA) {
+                                                title = title + "\\";
+                                                mIntentMode = INTENT_MODE_NORMAL;
+                                            }
+                                            Log.v("daming", " image title :" + title);
                                             mActivity.getMediaSaveService().addImage(bytes, title, date,
                                                     null, image.getWidth(), image.getHeight(), orientation, exif,
                                                     mOnMediaSavedListener, mContentResolver,pictureFormat);
@@ -3750,15 +3788,19 @@ public class CaptureModule implements CameraModule, PhotoController,
             if(!mLockAFAE) {
                 mControlAFMode = CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE;
                 mIsAutoFocusStarted = false;
+            }
+            applyFlash(mPreviewRequestBuilder[id], id);
+            if(!mLockAFAE) {
                 applySettingsForUnlockExposure(mPreviewRequestBuilder[id], id);
+            }
+            if (mSettingsManager.isDeveloperEnabled()) {
+                applyCommonSettings(mPreviewRequestBuilder[id], id);
+            }
+            if(!mLockAFAE) {
                 int afMode = (mSettingsManager.isDeveloperEnabled() && getDevAfMode() != -1) ?
                         getDevAfMode() : mControlAFMode;
                 setAFModeToPreview(id, mUI.getCurrentProMode() == ProMode.MANUAL_MODE ?
                         CaptureRequest.CONTROL_AF_MODE_OFF : afMode);
-            }
-            applyFlash(mPreviewRequestBuilder[id], id);
-            if (mSettingsManager.isDeveloperEnabled()) {
-                applyCommonSettings(mPreviewRequestBuilder[id], id);
             }
             mTakingPicture[id] = false;
             enableShutterAndVideoOnUiThread(id,false);
@@ -4120,6 +4162,7 @@ public class CaptureModule implements CameraModule, PhotoController,
     private void applyCommonSettings(CaptureRequest.Builder builder, int id) {
         builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO);
         builder.set(CaptureRequest.CONTROL_AF_MODE, mControlAFMode);
+        applyIsAfLock(builder);
         applyAfModes(builder);
         applyFaceDetection(builder);
         applyTouchTrackFocus(builder);
@@ -6087,6 +6130,15 @@ public class CaptureModule implements CameraModule, PhotoController,
         }
     }
 
+    private void applyIsAfLock(CaptureRequest.Builder builder){
+        try {
+            Log.v(TAG, " applyIsAfLock mLockAFAE :" + mLockAFAE);
+            builder.set(CaptureModule.isAfLock, (byte)(mLockAFAE ? 0x01 : 0x00));
+        } catch (IllegalArgumentException e) {
+            Log.w(TAG, "cannot find vendor tag: " + isAfLock.toString());
+        }
+    }
+
     private void applyLivePreview(CaptureRequest.Builder builder) {
         String value = mSettingsManager.getValue(SettingsManager.KEY_LIVE_PREVIEW);
         Log.v(TAG, "applyLivePreview livePreviewValue :" + value );
@@ -6351,6 +6403,7 @@ public class CaptureModule implements CameraModule, PhotoController,
 
             // set preview at resume and pause, no need repeating at stop
             if (captureRequestBuilder != null && (mCurrentSession != null) && !isStopRecord) {
+                applyZoom(captureRequestBuilder, mCurrentSceneMode.getCurrentId());
                 if (mCurrentSession instanceof CameraConstrainedHighSpeedCaptureSession) {
                     List requestList = CameraUtil.createHighSpeedRequestList(captureRequestBuilder.build());
                     mCurrentSession.setRepeatingBurst(requestList,
@@ -7503,7 +7556,7 @@ public class CaptureModule implements CameraModule, PhotoController,
         if (!checkSessionAndBuilder(mCaptureSession[id], captureRequest)) {
             return;
         }
-        if (mState[id] == STATE_PREVIEW) {
+        if (mState[id] == STATE_WAITING_TOUCH_FOCUS) {
             cancelTouchFocus(id);
         }
         applyZoom(captureRequest, id);
@@ -8769,6 +8822,13 @@ public class CaptureModule implements CameraModule, PhotoController,
                     mUI.enableVideo(true);
                     if (mIntentMode != INTENT_MODE_VIDEO && !mPaused) {
                         createSessions();
+                    }
+                    break;
+                }
+                case VOICE_INTERACTION_CAPTURE: {
+                    if (mIntentMode == INTENT_MODE_STILL_IMAGE_CAMERA && mIsVoiceTakePhote) {
+                        onShutterButtonClick();
+                        mIsVoiceTakePhote = false;
                     }
                     break;
                 }
