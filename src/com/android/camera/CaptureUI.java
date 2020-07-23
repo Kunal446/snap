@@ -1060,6 +1060,13 @@ public class CaptureUI implements FocusOverlayManager.FocusUI,
         });
     }
 
+    public int getPreviewBottom() {
+        if (mSurfaceView != null){
+            return (int)mSurfaceView.getY() + mSurfaceView.getHeight();
+        }
+        return 0;
+    }
+
     public void switchFrontBackCamera() {
         if (mIsVideoUI || !mModule.getCameraModeSwitcherAllowed()
                 || !isSupportFrontCamera(mModule.getCurrenCameraMode())) {
