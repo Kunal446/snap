@@ -371,8 +371,8 @@ public class CaptureModule implements CameraModule, PhotoController,
             new CameraCharacteristics.Key<>("org.quic.camera.MaxPreviewSize.MaxPreviewSize", int[].class);
     public static CameraCharacteristics.Key<Byte> is_burstshot_supported =
             new CameraCharacteristics.Key<>("org.quic.camera.BurstFPS.isBurstShotSupported", Byte.class);
-    public static CameraCharacteristics.Key<Integer> max_burstshot_fps =
-            new CameraCharacteristics.Key<>("org.quic.camera.BurstFPS.MaxBurstShotFPS", int.class);
+    public static CameraCharacteristics.Key<Float> max_burstshot_fps =
+            new CameraCharacteristics.Key<>("org.quic.camera.BurstFPS.MaxBurstShotFPS", Float.class);
     public static CameraCharacteristics.Key<Byte> is_liveshot_size_same_as_video =
             new CameraCharacteristics.Key<>("org.quic.camera.LiveshotSize.isLiveshotSizeSameAsVideoSize", Byte.class);
     public static CameraCharacteristics.Key<Byte> is_FD_Rendering_In_Video_UI_Supported =
@@ -472,6 +472,8 @@ public class CaptureModule implements CameraModule, PhotoController,
             new CaptureRequest.Key<>("org.quic.camera.recording.endOfStream", byte.class);
     public static final CaptureRequest.Key<Integer> earlyPCR =
             new CaptureRequest.Key<>("org.codeaurora.qcamera3.sessionParameters.numPCRsBeforeStreamOn", Integer.class);
+    public static final CaptureRequest.Key<Byte> mctf =
+            new CaptureRequest.Key<>("org.codeaurora.qcamera3.sessionParameters.enableMCTFwithReferenceFrame", byte.class);
     private static final CaptureResult.Key<Byte> is_depth_focus =
             new CaptureResult.Key<>("org.quic.camera.isDepthFocus.isDepthFocus", byte.class);
     private static final CaptureRequest.Key<Byte> capture_burst_fps =
@@ -511,6 +513,8 @@ public class CaptureModule implements CameraModule, PhotoController,
             new CaptureResult.Key<>("org.quic.camera2.objectTrackingResults.TrackerScore", Integer.class);
     public static final CameraCharacteristics.Key<Integer> mfnr_type =
             new CameraCharacteristics.Key<>("org.quic.camera.swcapabilities.MFNRType", Integer.class);
+    public static final CameraCharacteristics.Key<Byte> swmctf =
+            new CameraCharacteristics.Key<>("org.quic.camera.swcapabilities.SWMCTFEnable", byte.class);
 
     private TouchTrackFocusRenderer mT2TFocusRenderer;
     private boolean mIsDepthFocus = false;
@@ -3028,12 +3032,12 @@ public class CaptureModule implements CameraModule, PhotoController,
             }
         };
 
-    private int calculateMaxFps(){
-        int maxFps = mSettingsManager.getmaxBurstShotFPS();
+    private float calculateMaxFps(){
+        float maxFps = mSettingsManager.getmaxBurstShotFPS();
         if(maxFps > 0) {
             double size = mPictureSize.getWidth() * mPictureSize.getHeight();
             double maxsizefloat = mSupportedMaxPictureSize.getWidth() * mSupportedMaxPictureSize.getHeight();
-            maxFps = (int)Math.round((maxsizefloat * maxFps) / size);
+            maxFps = (float)((maxsizefloat * maxFps) / size);
             if (DEBUG) {
                 Log.i(TAG, "maxsize:" + mSupportedMaxPictureSize.getWidth() + ",height:" + mSupportedMaxPictureSize.getHeight() + "maxsize:" + maxsizefloat);
                 Log.i(TAG, "size:" + mPictureSize.getWidth() + ",height:" + mPictureSize.getHeight() + ",size:" + size);
@@ -3050,12 +3054,14 @@ public class CaptureModule implements CameraModule, PhotoController,
         if(calculateMaxFps() > 0){
             burstShotFpsNums = (int)(30/calculateMaxFps()) - 1;
         }
-        burstShotFpsNums = PersistUtil.isBurstShotFpsNums() > 0 ? PersistUtil.isBurstShotFpsNums() : burstShotFpsNums;
+        burstShotFpsNums = PersistUtil.isBurstShotFpsNums() > 1 ? PersistUtil.isBurstShotFpsNums() : burstShotFpsNums;
         int totalNums = (int)(PersistUtil.getLongshotShotLimit()/(burstShotFpsNums + 1));
         CaptureRequest.Builder builder = getRequestBuilder(id);
         addPreviewSurface(builder, null, id);
         applyCommonSettings(builder, id);
         applyFlash(builder, id);
+        if(totalNums < 60) totalNums = totalNums *2;
+        if (DEBUG) Log.i(TAG,"burstShotFpsNums:" + burstShotFpsNums + ",totalNums:" + totalNums);
         for (int i = 0; i < totalNums; i++) {
             for (int j = 0; j < burstShotFpsNums; j++) {
                 builder.setTag("preview");
@@ -3188,7 +3194,9 @@ public class CaptureModule implements CameraModule, PhotoController,
                     }
                 }
             } else {
-                captureBuilder.addTarget(mVideoSnapshotImageReader.getSurface());
+                if(mVideoSnapshotImageReader != null) {
+                    captureBuilder.addTarget(mVideoSnapshotImageReader.getSurface());
+                }
             }
             // send snapshot stream together with preview and video stream for snapshot request
             // stream is the surface for the app
@@ -3994,6 +4002,19 @@ public class CaptureModule implements CameraModule, PhotoController,
 
     private void applySessionParameters(CaptureRequest.Builder builder){
         applyEarlyPCR(builder);
+        applyMctf(builder);
+    }
+
+    private void applyMctf(CaptureRequest.Builder builder){
+        //add for mctf tag
+        if(mSettingsManager.isSwMctfSupported() && (mCurrentSceneMode.mode == CameraMode.VIDEO || mCurrentSceneMode.mode == CameraMode.HFR)){
+            int mctfVaule = PersistUtil.mctfValue();
+            try {
+                builder.set(CaptureModule.mctf, (byte)(mctfVaule == 1 ? 0x01 : 0x00));
+            } catch (IllegalArgumentException e) {
+                Log.d(TAG, "mctf no vendor tag");
+            }
+        }
     }
 
     private void applyCommonSettings(CaptureRequest.Builder builder, int id) {
