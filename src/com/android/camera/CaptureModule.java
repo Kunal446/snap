@@ -3340,6 +3340,9 @@ public class CaptureModule implements CameraModule, PhotoController,
             } else {
                 applyZoom(captureBuilder, id);
             }
+            if(mLockAFAE) {
+                applySettingsForLockExposure(captureBuilder, id);
+            }
             if (mHighSpeedCapture) {
                 captureBuilder.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,
                         mHighSpeedFPSRange);
@@ -3828,6 +3831,9 @@ public class CaptureModule implements CameraModule, PhotoController,
                 builder.setTag(id);
                 addPreviewSurface(builder, null, id);
                 applySettingsForUnlockFocus(builder, id);
+                if(mLockAFAE) {
+                    applySettingsForLockExposure(builder, id);
+                }
                 if (mCurrentSceneMode.mode == CameraMode.HFR && isHighSpeedRateCapture()) {
                     List<CaptureRequest> tafBuilderList = isSSMEnabled() ?
                             createSSMBatchRequest(builder) :
