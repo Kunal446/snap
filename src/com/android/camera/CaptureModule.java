@@ -6950,11 +6950,18 @@ public class CaptureModule implements CameraModule, PhotoController,
         if (!isRecorderReady() || getCameraMode() == DUAL_MODE) return;
 
         if (!mIsRecordingVideo) {
+            mUI.enableVideo(false);
             if (!startRecordingVideo(getMainCameraId())) {
                 // Show ui when start recording failed.
                 mUI.showUIafterRecording();
                 mFrameProcessor.setVideoOutputSurface(null);
             }
+            mHandler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    mUI.enableVideo(true);
+                }
+            }, 1000);
         } else if (mMediaRecorderStarted) {
             stopRecordingVideo(getMainCameraId());
         }

@@ -1378,6 +1378,7 @@ public class CaptureUI implements FocusOverlayManager.FocusUI,
         }
         //exit recording mode needs to refresh scene mode label.
         showSceneModeLabel();
+        enableVideo(true);
     }
 
     public void showRelatedIcons(CaptureModule.CameraMode mode) {
