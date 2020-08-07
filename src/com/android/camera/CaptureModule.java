@@ -374,8 +374,8 @@ public class CaptureModule implements CameraModule, PhotoController,
             new CameraCharacteristics.Key<>("org.quic.camera.MaxPreviewSize.MaxPreviewSize", int[].class);
     public static CameraCharacteristics.Key<Byte> is_burstshot_supported =
             new CameraCharacteristics.Key<>("org.quic.camera.BurstFPS.isBurstShotSupported", Byte.class);
-    public static CameraCharacteristics.Key<Integer> max_burstshot_fps =
-            new CameraCharacteristics.Key<>("org.quic.camera.BurstFPS.MaxBurstShotFPS", int.class);
+    public static CameraCharacteristics.Key<Float> max_burstshot_fps =
+            new CameraCharacteristics.Key<>("org.quic.camera.BurstFPS.MaxBurstShotFPS", Float.class);
     public static CameraCharacteristics.Key<Byte> is_liveshot_size_same_as_video =
             new CameraCharacteristics.Key<>("org.quic.camera.LiveshotSize.isLiveshotSizeSameAsVideoSize", Byte.class);
     public static CameraCharacteristics.Key<Byte> is_FD_Rendering_In_Video_UI_Supported =
@@ -1317,14 +1317,13 @@ public class CaptureModule implements CameraModule, PhotoController,
         @Override
         public void onOpened(CameraDevice cameraDevice) {
             int id = Integer.parseInt(cameraDevice.getId());
-            Log.d(TAG, "onOpened " + id);
+            mCameraDevice[id] = cameraDevice;
+            mCameraOpened[id] = true;
             mCameraOpenCloseLock.release();
+            Log.d(TAG, "onOpened " + id);
             if (mPaused) {
                 return;
             }
-
-            mCameraDevice[id] = cameraDevice;
-            mCameraOpened[id] = true;
 
             if (isBackCamera() && getCameraMode() == DUAL_MODE && id == BAYER_ID) {
                 Message msg = mCameraHandler.obtainMessage(OPEN_CAMERA, MONO_ID, 0);
@@ -2386,7 +2385,6 @@ public class CaptureModule implements CameraModule, PhotoController,
         CURRENT_MODE = mCurrentSceneMode.mode;
         CURRENT_ID = mCurrentSceneMode.getNextCameraId(CURRENT_MODE);
         Log.d(TAG, "reinitSceneMode: CURRENT_ID :" + CURRENT_ID);
-        mSettingsManager.init();
     }
 
     public void reinit() {
@@ -3209,12 +3207,12 @@ public class CaptureModule implements CameraModule, PhotoController,
             }
         };
 
-    private int calculateMaxFps(){
-        int maxFps = mSettingsManager.getmaxBurstShotFPS();
+    private float calculateMaxFps(){
+        float maxFps = mSettingsManager.getmaxBurstShotFPS();
         if(maxFps > 0) {
             double size = mPictureSize.getWidth() * mPictureSize.getHeight();
             double maxsizefloat = mSupportedMaxPictureSize.getWidth() * mSupportedMaxPictureSize.getHeight();
-            maxFps = (int)Math.round((maxsizefloat * maxFps) / size);
+            maxFps = (float)((maxsizefloat * maxFps) / size);
             if (DEBUG) {
                 Log.i(TAG, "maxsize:" + mSupportedMaxPictureSize.getWidth() + ",height:" + mSupportedMaxPictureSize.getHeight() + "maxsize:" + maxsizefloat);
                 Log.i(TAG, "size:" + mPictureSize.getWidth() + ",height:" + mPictureSize.getHeight() + ",size:" + size);
@@ -4031,12 +4029,12 @@ public class CaptureModule implements CameraModule, PhotoController,
 
         try {
             // Close camera starting with AUX first
+            if (!mCameraOpenCloseLock.tryAcquire(2000, TimeUnit.MILLISECONDS)) {
+                Log.d(TAG, "Time out waiting to lock camera closing.");
+                throw new RuntimeException("Time out waiting to lock camera closing");
+            }
             for (int i = MAX_NUM_CAM-1; i >= 0; i--) {
                 if (null != mCameraDevice[i]) {
-                    if (!mCameraOpenCloseLock.tryAcquire(2000, TimeUnit.MILLISECONDS)) {
-                        Log.d(TAG, "Time out waiting to lock camera closing.");
-                        throw new RuntimeException("Time out waiting to lock camera closing");
-                    }
                     Log.d(TAG, "Closing camera: " + mCameraDevice[i].getId());
 
                     // session was closed here if intentMode is INTENT_MODE_VIDEO
@@ -5664,11 +5662,11 @@ public class CaptureModule implements CameraModule, PhotoController,
             updateFaceDetection();
             try {
                 setUpVideoCaptureRequestBuilder(mVideoRecordRequestBuilder, cameraId);
-                mCurrentSession.setRepeatingRequest(mVideoRecordRequestBuilder.build(),
+                cameraCaptureSession.setRepeatingRequest(mVideoRecordRequestBuilder.build(),
                         mCaptureCallback, mCameraHandler);
-            } catch (CameraAccessException e) {
+            } catch (CameraAccessException e ) {
                 e.printStackTrace();
-            } catch (IllegalStateException e) {
+            } catch (IllegalStateException | NullPointerException e) {
                 e.printStackTrace();
             }
             if (!mFrameProcessor.isFrameListnerEnabled() && !startMediaRecorder()) {
