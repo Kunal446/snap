@@ -334,14 +334,26 @@ public class SettingsManager implements ListMenu.SettingsListener {
     }
 
     public void init() {
-        Log.d(TAG, "SettingsManager init");
         int cameraId = getInitialCameraId(mPreferences);
+        Log.d(TAG, "SettingsManager init cameraId :" + cameraId);
         setLocalIdAndInitialize(cameraId);
+        reloadCharacteristics(cameraId);
     }
 
     public void reinit(int cameraId) {
         Log.d(TAG, "SettingsManager reinit " + cameraId);
         setLocalIdAndInitialize(cameraId);
+    }
+
+    public void reloadCharacteristics(int cameraId){
+        CameraManager manager = (CameraManager) mContext.getSystemService(Context.CAMERA_SERVICE);
+        try {
+            CameraCharacteristics characteristics
+                    = manager.getCameraCharacteristics(String.valueOf(cameraId));
+            mCharacteristics.set(cameraId, characteristics);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
     }
 
     private void setLocalIdAndInitialize(int cameraId) {
@@ -658,17 +670,7 @@ public class SettingsManager implements ListMenu.SettingsListener {
     }
 
     public int getInitialCameraId(SharedPreferences pref) {
-        int switchId = Integer.parseInt(
-                pref.getString(SettingsManager.KEY_SWITCH_CAMERA,"-1"));
-        CaptureModule.SWITCH_ID = switchId;
-        Log.d(TAG,"SWITCH_ID = " + switchId);
-        if (switchId != -1) return switchId;
-        String value = pref.getString(SettingsManager.KEY_CAMERA_ID, "0");
-        int frontBackId = Integer.parseInt(value);
-        if (frontBackId == CaptureModule.FRONT_ID) return frontBackId;
-        String monoOnly = pref.getString(SettingsManager.KEY_MONO_ONLY, "off");
-        if (monoOnly.equals("off")) return frontBackId;
-        else return CaptureModule.MONO_ID;
+        return CaptureModule.CURRENT_ID;
     }
 
     private void filterPreferences(int cameraId) {
