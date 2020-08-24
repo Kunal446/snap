@@ -721,9 +721,6 @@ public class CaptureUI implements FocusOverlayManager.FocusUI,
     }
 
     public void showZoomSeekBar() {
-        if(mFilterMenuStatus == FILTER_MENU_ON){
-            return;
-        }
         if (mZoomLinearLayout != null) {
             mZoomLinearLayout.setVisibility(View.VISIBLE);
         }
@@ -735,6 +732,9 @@ public class CaptureUI implements FocusOverlayManager.FocusUI,
         }
         if (mZoomSwitch != null) {
             mZoomSwitch.setVisibility(View.VISIBLE);
+        }
+        if(mFilterMenuStatus == FILTER_MENU_ON){
+            hideZoomSeekBar();
         }
     }
 
@@ -1378,6 +1378,7 @@ public class CaptureUI implements FocusOverlayManager.FocusUI,
         }
         //exit recording mode needs to refresh scene mode label.
         showSceneModeLabel();
+        enableVideo(true);
     }
 
     public void showRelatedIcons(CaptureModule.CameraMode mode) {

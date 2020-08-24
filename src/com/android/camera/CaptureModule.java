@@ -2944,7 +2944,6 @@ public class CaptureModule implements CameraModule, PhotoController,
 
             CaptureRequest.Builder captureBuilder = getRequestBuilder(
                     CameraDevice.TEMPLATE_STILL_CAPTURE,id);
-
             if(mLockAFAE){
                 applySettingsForLockExposure(captureBuilder, id);
             }
@@ -3853,15 +3852,19 @@ public class CaptureModule implements CameraModule, PhotoController,
             if(!mLockAFAE) {
                 mControlAFMode = CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE;
                 mIsAutoFocusStarted = false;
+            }
+            applyFlash(mPreviewRequestBuilder[id], id);
+            if(!mLockAFAE) {
                 applySettingsForUnlockExposure(mPreviewRequestBuilder[id], id);
+            }
+            if (mSettingsManager.isDeveloperEnabled()) {
+                applyCommonSettings(mPreviewRequestBuilder[id], id);
+            }
+            if(!mLockAFAE) {
                 int afMode = (mSettingsManager.isDeveloperEnabled() && getDevAfMode() != -1) ?
                         getDevAfMode() : mControlAFMode;
                 setAFModeToPreview(id, mUI.getCurrentProMode() == ProMode.MANUAL_MODE ?
                         CaptureRequest.CONTROL_AF_MODE_OFF : afMode);
-            }
-            applyFlash(mPreviewRequestBuilder[id], id);
-            if (mSettingsManager.isDeveloperEnabled()) {
-                applyCommonSettings(mPreviewRequestBuilder[id], id);
             }
             mTakingPicture[id] = false;
             enableShutterAndVideoOnUiThread(id,false);
@@ -4403,6 +4406,8 @@ public class CaptureModule implements CameraModule, PhotoController,
             closeCamera();
             mUI.showPreviewCover();
             mUI.hideSurfaceView();
+        }else{
+            closeProcessors();
         }
         resetAudioMute();
         mUI.releaseSoundPool();
@@ -6947,11 +6952,18 @@ public class CaptureModule implements CameraModule, PhotoController,
         if (!isRecorderReady() || getCameraMode() == DUAL_MODE) return;
 
         if (!mIsRecordingVideo) {
+            mUI.enableVideo(false);
             if (!startRecordingVideo(getMainCameraId())) {
                 // Show ui when start recording failed.
                 mUI.showUIafterRecording();
                 mFrameProcessor.setVideoOutputSurface(null);
             }
+            mHandler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    mUI.enableVideo(true);
+                }
+            }, 1000);
         } else if (mMediaRecorderStarted) {
             stopRecordingVideo(getMainCameraId());
         }
@@ -7586,8 +7598,16 @@ public class CaptureModule implements CameraModule, PhotoController,
                     session.setRepeatingBurst(createSSMBatchRequest(mPreviewRequestBuilder[id]),
                             mCaptureCallback, mCameraHandler);
                 } else {
-                    mCaptureSession[id].setRepeatingRequest(mPreviewRequestBuilder[id]
-                            .build(), mCaptureCallback, mCameraHandler);
+                    int preivewFPS = mSettingsManager.getVideoPreviewFPS(mVideoSize,
+                        mSettingsManager.getVideoFPS());
+                    if (preivewFPS == 30 && mCurrentSceneMode.mode == CameraMode.VIDEO) {
+                        List list = CameraUtil
+                            .createHighSpeedRequestList(mVideoRecordRequestBuilder.build());
+                        session.setRepeatingBurst(list, mCaptureCallback, mCameraHandler);
+                    } else {
+                        session.setRepeatingRequest(mPreviewRequestBuilder[id]
+                                .build(), mCaptureCallback, mCameraHandler);
+                    }
                 }
 
             }
