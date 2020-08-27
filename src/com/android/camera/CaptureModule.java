@@ -149,6 +149,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.Executor;
 import java.lang.reflect.Method;
+import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
 import androidx.heifwriter.HeifWriter;
@@ -178,6 +179,7 @@ public class CaptureModule implements CameraModule, PhotoController,
     public static final int INTENT_MODE_CAPTURE = 1;
     public static final int INTENT_MODE_VIDEO = 2;
     public static final int INTENT_MODE_CAPTURE_SECURE = 3;
+    public static final int INTENT_MODE_STILL_IMAGE_CAMERA = 4;
     private static final int BACK_MODE = 0;
     private static final int FRONT_MODE = 1;
     private static final int CANCEL_TOUCH_FOCUS_DELAY = PersistUtil.getCancelTouchFocusDelay();
@@ -605,6 +607,7 @@ public class CaptureModule implements CameraModule, PhotoController,
     private static final String sTempCropFilename = "crop-temp";
     private static final int REQUEST_CROP = 1000;
     private int mIntentMode = INTENT_MODE_NORMAL;
+    private boolean mIsVoiceTakePhote = false;
     private String mCropValue;
     private Uri mCurrentVideoUri;
     private boolean mTempHoldVideoInVideoIntent = false;
@@ -698,6 +701,7 @@ public class CaptureModule implements CameraModule, PhotoController,
     private CamcorderProfile mProfile;
     private static final int CLEAR_SCREEN_DELAY = 4;
     private static final int UPDATE_RECORD_TIME = 5;
+    private static final int VOICE_INTERACTION_CAPTURE = 7;
     private ContentValues mCurrentVideoValues;
     private String mVideoFilename;
     private boolean mMediaRecorderPausing = false;
@@ -1329,6 +1333,7 @@ public class CaptureModule implements CameraModule, PhotoController,
             mCameraDevice[id] = null;
             mCameraOpenCloseLock.release();
             mCamerasOpened = false;
+            mIsCloseCamera = true;
         }
 
         @Override
@@ -1352,6 +1357,7 @@ public class CaptureModule implements CameraModule, PhotoController,
             mCameraDevice[id] = null;
             mCameraOpenCloseLock.release();
             mCamerasOpened = false;
+            mIsCloseCamera = true;
         }
 
     };
@@ -1940,7 +1946,10 @@ public class CaptureModule implements CameraModule, PhotoController,
                                     mCaptureSession[id].setRepeatingRequest(mPreviewRequestBuilder[id]
                                             .build(), mCaptureCallback, mCameraHandler);
                                 }
-
+                                if (mIntentMode == INTENT_MODE_STILL_IMAGE_CAMERA &&
+                                        mIsVoiceTakePhote) {
+                                    mHandler.sendEmptyMessageDelayed(VOICE_INTERACTION_CAPTURE, 500);
+                                }
                                 if (isClearSightOn()) {
                                     ClearSightImageProcessor.getInstance().onCaptureSessionConfigured(id == BAYER_ID, cameraCaptureSession);
                                 } else if (mChosenImageFormat == ImageFormat.PRIVATE && id == getMainCameraId()) {
@@ -2268,7 +2277,6 @@ public class CaptureModule implements CameraModule, PhotoController,
         CURRENT_MODE = mCurrentSceneMode.mode;
         CURRENT_ID = mCurrentSceneMode.getNextCameraId(CURRENT_MODE);
         Log.d(TAG, "reinitSceneMode: CURRENT_ID :" + CURRENT_ID);
-        mSettingsManager.init();
     }
 
     public void reinit() {
@@ -2460,6 +2468,30 @@ public class CaptureModule implements CameraModule, PhotoController,
 
     private void initModeByIntent() {
         String action = mActivity.getIntent().getAction();
+        Log.v(TAG, " initModeByIntent: " + action);
+        Bundle bundle = mActivity.getIntent().getExtras();
+        if (bundle != null) {
+            Log.v(TAG, " initModeByIntent bundle :" + bundle.toString());
+        }
+        if (MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA.equals(action)) {
+            mIntentMode = INTENT_MODE_STILL_IMAGE_CAMERA;
+            Set<String> categories = mActivity.getIntent().getCategories();
+            if (categories != null) {
+                for(String categorie: categories) {
+                    Log.v(TAG, " initModeByIntent categorie :" + categorie);
+                    if(categorie.equals("android.intent.category.VOICE")) {
+                        mIsVoiceTakePhote = true;
+                    }
+                }
+            }
+            boolean isOpenOnly = mActivity.getIntent().getBooleanExtra(
+                    "com.google.assistant.extra.CAMERA_OPEN_ONLY", false);
+            if (isOpenOnly) {
+                mIsVoiceTakePhote = false;
+            }
+            Log.v(TAG, " initModeByIntent isOpenOnly :" + isOpenOnly + ", mIsVoiceTakePhote :"
+                    + mIsVoiceTakePhote);
+        }
         if (MediaStore.ACTION_IMAGE_CAPTURE.equals(action)) {
             mIntentMode = INTENT_MODE_CAPTURE;
         } else if (CameraActivity.ACTION_IMAGE_CAPTURE_SECURE.equals(action)) {
@@ -2788,7 +2820,9 @@ public class CaptureModule implements CameraModule, PhotoController,
 
             CaptureRequest.Builder captureBuilder = getRequestBuilder(
                     CameraDevice.TEMPLATE_STILL_CAPTURE,id);
-
+            if(mLockAFAE){
+                applySettingsForLockExposure(captureBuilder, id);
+            }
             if (mSettingsManager.isZSLInHALEnabled() || isActionImageCapture()) {
                 captureBuilder.set(CaptureRequest.CONTROL_ENABLE_ZSL, true);
             } else {
@@ -3163,6 +3197,9 @@ public class CaptureModule implements CameraModule, PhotoController,
             captureBuilder.set(CaptureRequest.JPEG_THUMBNAIL_SIZE, mVideoSnapshotThumbSize);
             captureBuilder.set(CaptureRequest.JPEG_THUMBNAIL_QUALITY, (byte)80);
             applyVideoSnapshot(captureBuilder, id);
+            if(mLockAFAE) {
+                applySettingsForLockExposure(captureBuilder, id);
+            }
             applyZoom(captureBuilder, id);
             if (mHighSpeedCapture) {
                 captureBuilder.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,
@@ -3430,7 +3467,9 @@ public class CaptureModule implements CameraModule, PhotoController,
                                         } else {
                                             orientation = CameraUtil.getJpegRotation(getMainCameraId(),mOrientation);
                                         }
-                                        if (mIntentMode != CaptureModule.INTENT_MODE_NORMAL) {
+
+                                        if (mIntentMode != CaptureModule.INTENT_MODE_NORMAL &&
+                                                mIntentMode != INTENT_MODE_STILL_IMAGE_CAMERA) {
                                             mJpegImageData = bytes;
                                             if (!mQuickCapture) {
                                                 showCapturedReview(bytes, orientation);
@@ -3441,6 +3480,9 @@ public class CaptureModule implements CameraModule, PhotoController,
                                             String pictureFormat = "jpeg";
                                             if (image.getFormat() == ImageFormat.HEIC) {
                                                 pictureFormat = "heic";
+                                            }
+                                            if (mIntentMode == INTENT_MODE_STILL_IMAGE_CAMERA) {
+                                                mIntentMode = INTENT_MODE_NORMAL;
                                             }
                                             mActivity.getMediaSaveService().addImage(bytes, title, date,
                                                     null, image.getWidth(), image.getHeight(), orientation, exif,
@@ -3618,6 +3660,10 @@ public class CaptureModule implements CameraModule, PhotoController,
     public void unlockFocus(int id) {
         Log.d(TAG, "unlockFocus " + id);
         isFlashRequiredInDriver = false;
+        if ((mCurrentSceneMode.mode == CameraMode.HFR) && isHighSpeedRateCapture()) {
+            Log.d(TAG, "unlockFocus should not be triggered in HFR");
+            return;
+        }
         if (!checkSessionAndBuilder(mCaptureSession[id], mPreviewRequestBuilder[id])) {
             return;
         }
@@ -3643,15 +3689,19 @@ public class CaptureModule implements CameraModule, PhotoController,
             if(!mLockAFAE) {
                 mControlAFMode = CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE;
                 mIsAutoFocusStarted = false;
+            }
+            applyFlash(mPreviewRequestBuilder[id], id);
+            if(!mLockAFAE) {
                 applySettingsForUnlockExposure(mPreviewRequestBuilder[id], id);
+            }
+            if (mSettingsManager.isDeveloperEnabled()) {
+                applyCommonSettings(mPreviewRequestBuilder[id], id);
+            }
+            if(!mLockAFAE) {
                 int afMode = (mSettingsManager.isDeveloperEnabled() && getDevAfMode() != -1) ?
                         getDevAfMode() : mControlAFMode;
                 setAFModeToPreview(id, mUI.getCurrentProMode() == ProMode.MANUAL_MODE ?
                         CaptureRequest.CONTROL_AF_MODE_OFF : afMode);
-            }
-            applyFlash(mPreviewRequestBuilder[id], id);
-            if (mSettingsManager.isDeveloperEnabled()) {
-                applyCommonSettings(mPreviewRequestBuilder[id], id);
             }
             mTakingPicture[id] = false;
             enableShutterAndVideoOnUiThread(id,false);
@@ -4187,6 +4237,8 @@ public class CaptureModule implements CameraModule, PhotoController,
             closeCamera();
             mUI.showPreviewCover();
             mUI.hideSurfaceView();
+        }else{
+            closeProcessors();
         }
         resetAudioMute();
         mUI.releaseSoundPool();
@@ -4242,7 +4294,7 @@ public class CaptureModule implements CameraModule, PhotoController,
             }
         } else {
             if (mState[getMainCameraId()] == STATE_WAITING_TOUCH_FOCUS ||
-                    mState[getMainCameraId()] == STATE_PREVIEW) {
+                    mState[getMainCameraId()] == STATE_PREVIEW || mLockAFAE) {
                 cancelTouchFocus(getMainCameraId());
             }
         }
@@ -4444,6 +4496,9 @@ public class CaptureModule implements CameraModule, PhotoController,
                 + (resumeFromRestartAll ? " isResumeFromRestartAll" : ""));
         if(mCurrentSceneMode.mode == CameraMode.VIDEO){
             enableVideoButton(false);//disable the video button before media recorder is ready
+        }
+        if (mCurrentSceneMode.mode != CameraMode.HFR){
+            mHighSpeedCapture = false;
         }
         checkRTBCameraId();
         if (!isBackCamera() && !frontIsAllowed()) {
@@ -6196,7 +6251,7 @@ public class CaptureModule implements CameraModule, PhotoController,
                             mCaptureCallback, mCameraHandler);
                 }
             }
-        } catch (CameraAccessException | IllegalStateException | NullPointerException e) {
+        } catch (CameraAccessException | IllegalStateException | NullPointerException | IllegalArgumentException e) {
             e.printStackTrace();
         }
     }
@@ -6488,6 +6543,7 @@ public class CaptureModule implements CameraModule, PhotoController,
         mMediaRecorder.reset();
 
         updateHFRSetting();
+        mHighSpeedCapture = mHighSpeedCapture && (myExtras == null); //MMS not support high speed
         boolean hfr = mHighSpeedCapture && !mHighSpeedRecordingMode;
 
         if (CamcorderProfile.hasProfile(cameraId, size)) {
@@ -6698,6 +6754,9 @@ public class CaptureModule implements CameraModule, PhotoController,
             if (mSettingsManager.isLiveshotSupported(mVideoSize,mSettingsManager.getVideoFPS())){
                 captureVideoSnapshot(getMainCameraId());
             }
+            return;
+        }
+        if (!mUI.isShutterEnabled()) {
             return;
         }
 
@@ -8261,14 +8320,14 @@ public class CaptureModule implements CameraModule, PhotoController,
     public void restartAll() {
         int nextCameraId = getNextScreneModeId(mNextModeIndex);
         Log.d(TAG, "restart all CURRENT_ID :" + CURRENT_ID + " nextCameraId :" + nextCameraId);
-        if(CURRENT_ID == nextCameraId){
+        if(CURRENT_ID == nextCameraId && mCameraDevice[nextCameraId] != null){
             mIsCloseCamera = false;
         }else{
             mIsCloseCamera = true;
         }
         if(mLockAFAE) {
             mLockAFAE = false;
-            unlockFocus(mCurrentSceneMode.getCurrentId());
+            applySettingsForUnlockExposure(mPreviewRequestBuilder[CURRENT_ID], CURRENT_ID);
             updateLockAFAEVisibility();
         }
         onPauseBeforeSuper();
@@ -8513,6 +8572,13 @@ public class CaptureModule implements CameraModule, PhotoController,
                 }
                 case UPDATE_RECORD_TIME: {
                     updateRecordingTime();
+                    break;
+                }
+                case VOICE_INTERACTION_CAPTURE: {
+                    if (mIntentMode == INTENT_MODE_STILL_IMAGE_CAMERA && mIsVoiceTakePhote) {
+                        onShutterButtonClick();
+                        mIsVoiceTakePhote = false;
+                    }
                     break;
                 }
             }
