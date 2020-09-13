@@ -643,8 +643,8 @@ public class CaptureModule implements CameraModule, PhotoController,
             }
             if (id == getMainCameraId()) {
                 mPreviewCaptureResult = result;
+                updateCaptureStateMachine(id, result);
             }
-            updateCaptureStateMachine(id, result);
         }
 
         @Override
@@ -659,8 +659,8 @@ public class CaptureModule implements CameraModule, PhotoController,
                 } else {
                     updateFaceView(faces, null);
                 }
+                updateCaptureStateMachine(id, partialResult);
             }
-            updateCaptureStateMachine(id, partialResult);
         }
 
         @Override
@@ -1790,9 +1790,12 @@ public class CaptureModule implements CameraModule, PhotoController,
         }
         try {
             CaptureRequest.Builder builder = getRequestBuilder(id);
-            builder.setTag(id);
+            builder.setTag(id + 3);
             addPreviewSurface(builder, null, id);
-
+            builder.set(CaptureRequest.CONTROL_AF_TRIGGER,
+                CaptureRequest.CONTROL_AF_TRIGGER_CANCEL);
+            mCaptureSession[id].capture(builder.build(), mCaptureCallback, mCameraHandler);
+            builder.setTag(id);
             mControlAFMode = CaptureRequest.CONTROL_AF_MODE_AUTO;
             applySettingsForAutoFocus(builder, id);
             mState[id] = STATE_WAITING_TOUCH_FOCUS;
