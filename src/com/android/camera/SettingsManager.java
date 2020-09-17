@@ -285,7 +285,7 @@ public class SettingsManager implements ListMenu.SettingsListener {
         KEY_ISO_INDEX.put(MAUNAL_ABSOLUTE_ISO_VALUE, 8);
         Set<String> h265 = new HashSet<>();
         h265.add("HEVCProfileMain10");
-        h265.add("HEVCProfileMain10HDR10");
+        //h265.add("HEVCProfileMain10HDR10");
         VIDEO_ENCODER_PROFILE_TABLE.put("h265", h265);
     }
 
@@ -629,8 +629,8 @@ public class SettingsManager implements ListMenu.SettingsListener {
         return isCameraFDSupported;
     }
 
-    public int getmaxBurstShotFPS(){
-        int maxBurstShotFPS = 0;
+    public float getmaxBurstShotFPS(){
+        float maxBurstShotFPS = 0;
         try {
             maxBurstShotFPS = mCharacteristics.get(mCameraId).get(CaptureModule.max_burstshot_fps);
         } catch (IllegalArgumentException e) {
@@ -1524,7 +1524,7 @@ public class SettingsManager implements ListMenu.SettingsListener {
         }
     }
 
-    private void filterHFROptions() {
+    public void filterHFROptions() {
         ListPreference hfrPref = mPreferenceGroup.findPreference(KEY_VIDEO_HIGH_FRAME_RATE);
         if (hfrPref != null) {
             hfrPref.reloadInitialEntriesAndEntryValues();
