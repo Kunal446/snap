@@ -1047,8 +1047,10 @@ public class CaptureModule implements CameraModule, PhotoController,
                     if (mCurrentSession != null) {
                         List requestList = ((CameraConstrainedHighSpeedCaptureSession) mCurrentSession)
                                 .createHighSpeedRequestList(mPreviewRequestBuilder[id].build());
-                        mCurrentSession.setRepeatingBurst(requestList, mCaptureCallback,
-                                mCameraHandler);
+                        if (mCurrentSession != null) {
+                            mCurrentSession.setRepeatingBurst(requestList, mCaptureCallback,
+                                    mCameraHandler);
+                        }
                     }
                 } else {
                     if (mCurrentSession != null) {
@@ -1592,6 +1594,14 @@ public class CaptureModule implements CameraModule, PhotoController,
 
     public boolean isBackCamera() {
         String value = mSettingsManager.getValue(SettingsManager.KEY_FRONT_REAR_SWITCHER_VALUE);
+        if (value == null) return true;
+        return value.equals("rear");
+    }
+
+    private boolean isBackCameraId() {
+        final SharedPreferences pref = mActivity.getSharedPreferences(
+                ComboPreferences.getGlobalSharedPreferencesName(mActivity), Context.MODE_PRIVATE);
+        String value = pref.getString(SettingsManager.KEY_FRONT_REAR_SWITCHER_VALUE, null);
         if (value == null) return true;
         return value.equals("rear");
     }
@@ -2309,9 +2319,13 @@ public class CaptureModule implements CameraModule, PhotoController,
         mSettingsManager = SettingsManager.getInstance();
         mSettingsManager.createCaptureModule(this);
         mSettingsManager.registerListener(this);
+        if (isBackCameraId()) {
+            CURRENT_ID = BACK_MODE;
+        } else {
+            CURRENT_ID = FRONT_MODE;
+        }
         mSettingsManager.init();
         mFirstPreviewLoaded = false;
-        CURRENT_ID = 0;
         Log.d(TAG, "init");
         for (int i = 0; i < MAX_NUM_CAM; i++) {
             mCameraOpened[i] = false;
@@ -3810,11 +3824,20 @@ public class CaptureModule implements CameraModule, PhotoController,
             if (null != mCaptureSession[i]) {
                 if (mCamerasOpened) {
                     try {
-                        mCaptureSession[i].capture(mPreviewRequestBuilder[i].build(), null,
-                                mCameraHandler);
+                        if (mCurrentSession instanceof CameraConstrainedHighSpeedCaptureSession) {
+                            List requestList = ((CameraConstrainedHighSpeedCaptureSession)
+                                    mCurrentSession).createHighSpeedRequestList(
+                                            mVideoRecordRequestBuilder.build());
+                            mCurrentSession.captureBurst(requestList, null, mCameraHandler);
+                        } else {
+                            mCaptureSession[i].capture(mPreviewRequestBuilder[i].build(), null,
+                                    mCameraHandler);
+                        }
                     } catch (CameraAccessException e) {
                         e.printStackTrace();
                     } catch (IllegalStateException e) {
+                        e.printStackTrace();
+                    } catch (IllegalArgumentException e) {
                         e.printStackTrace();
                     }
                 }
@@ -4494,7 +4517,10 @@ public class CaptureModule implements CameraModule, PhotoController,
     private void onResumeAfterSuper(boolean resumeFromRestartAll) {
         Log.d(TAG, "onResume " + (mCurrentSceneMode != null ? mCurrentSceneMode.mode : "null")
                 + (resumeFromRestartAll ? " isResumeFromRestartAll" : ""));
-        if(mCurrentSceneMode.mode == CameraMode.VIDEO){
+        reinit();
+        setCameraModeSwitcherAllowed(false);
+        if(mCurrentSceneMode.mode == CameraMode.VIDEO ||
+                mCurrentSceneMode.mode == CameraMode.HFR){
             enableVideoButton(false);//disable the video button before media recorder is ready
         }
         if (mCurrentSceneMode.mode != CameraMode.HFR){
@@ -4956,8 +4982,7 @@ public class CaptureModule implements CameraModule, PhotoController,
     }
 
     private boolean isTouchToFocusAllowed() {
-        if (isTakingPicture() || (mIsRecordingVideo && !isSSMEnabled())
-                || isTouchAfEnabledSceneMode()) return false;
+        if (isTakingPicture() || isTouchAfEnabledSceneMode()) return false;
         return true;
     }
 
@@ -5501,9 +5526,6 @@ public class CaptureModule implements CameraModule, PhotoController,
             List<CaptureRequest> slowMoRequests = null;
             try {
                 setUpVideoCaptureRequestBuilder(mVideoRecordRequestBuilder, cameraId);
-                int deviceSocId = mSettingsManager.getDeviceSocId();
-                int preivewFPS = mSettingsManager.getVideoPreviewFPS(mVideoSize,
-                        mSettingsManager.getVideoFPS());
                 if (isHighSpeedRateCapture()) {
                     slowMoRequests = mSuperSlomoCapture ?
                             createSSMBatchRequest(mVideoRecordRequestBuilder) :
@@ -5511,12 +5533,25 @@ public class CaptureModule implements CameraModule, PhotoController,
                                     .createHighSpeedRequestList(mVideoRecordRequestBuilder.build());
                     mCurrentSession.setRepeatingBurst(slowMoRequests, mCaptureCallback, mCameraHandler);
                 } else {
-                    mCurrentSession.setRepeatingRequest(mVideoRecordRequestBuilder.build(),
-                            mCaptureCallback, mCameraHandler);
+                    int previewFPS = mSettingsManager.getVideoPreviewFPS(mVideoSize,
+                            mSettingsManager.getVideoFPS());
+                    if (previewFPS == 30 && mHighSpeedCaptureRate == 60) {
+                        List<CaptureRequest> burstList = new ArrayList<>();
+                        burstList.add(mVideoRecordRequestBuilder.build());
+                        mVideoRecordRequestBuilder.removeTarget(mVideoPreviewSurface);
+                        burstList.add(mVideoRecordRequestBuilder.build());
+                        mCurrentSession.setRepeatingBurst(burstList, mCaptureCallback, mCameraHandler);
+                        mVideoRecordRequestBuilder.addTarget(mVideoPreviewSurface);
+                    } else {
+                        mCurrentSession.setRepeatingRequest(mVideoRecordRequestBuilder.build(),
+                                mCaptureCallback, mCameraHandler);
+                    }
                 }
             } catch (CameraAccessException e) {
                 e.printStackTrace();
             } catch (IllegalStateException e) {
+                e.printStackTrace();
+            } catch (NullPointerException e) {
                 e.printStackTrace();
             }
         }
@@ -9015,6 +9050,7 @@ public class CaptureModule implements CameraModule, PhotoController,
 
     public void setCameraModeSwitcherAllowed(boolean allow) {
         mCameraModeSwitcherAllowed = allow;
+        mUI.updateCameraSwitchEnable(allow);
     }
 
     public boolean getCameraModeSwitcherAllowed() {
