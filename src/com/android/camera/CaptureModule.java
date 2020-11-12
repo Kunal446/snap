@@ -155,6 +155,7 @@ public class CaptureModule implements CameraModule, PhotoController,
     public static int MONO_ID = -1;
     public static int FRONT_ID = -1;
     public static int SWITCH_ID = -1;
+    public static int CURRENT_ID = 0;
     public static final int INTENT_MODE_NORMAL = 0;
     public static final int INTENT_MODE_CAPTURE = 1;
     public static final int INTENT_MODE_VIDEO = 2;
@@ -1509,6 +1510,8 @@ public class CaptureModule implements CameraModule, PhotoController,
     }
 
     public void reinit() {
+        CURRENT_ID = getMainCameraId();
+        Log.d(TAG, "reinit: CURRENT_ID camera id " + CURRENT_ID);
         mSettingsManager.init();
     }
 
@@ -2375,6 +2378,7 @@ public class CaptureModule implements CameraModule, PhotoController,
                         mImageReader[i].setOnImageAvailableListener(mPostProcessor.getImageHandler(), mImageAvailableHandler);
                         mPostProcessor.onImageReaderReady(mImageReader[i], mSupportedMaxPictureSize, mPictureSize);
                     } else if (i == getMainCameraId()) {
+                        Log.v(TAG, " mPictureSize :" + mPictureSize.getWidth() + " X " + mPictureSize.getHeight());
                         mImageReader[i] = ImageReader.newInstance(mPictureSize.getWidth(),
                                 mPictureSize.getHeight(), imageFormat, MAX_IMAGE_BUFFER_SIZE);
 
@@ -3019,6 +3023,12 @@ public class CaptureModule implements CameraModule, PhotoController,
 
     @Override
     public void onResumeBeforeSuper() {
+        // must change cameraId before "mPaused = false;"
+        int facingOfIntentExtras = CameraUtil.getFacingOfIntentExtras(mActivity);
+        if (facingOfIntentExtras != -1) {
+            mSettingsManager.setValue(SettingsManager.KEY_SWITCH_CAMERA,
+                    facingOfIntentExtras == CameraUtil.FACING_BACK ? "rear" : "front");
+        }
         mPaused = false;
         for (int i = 0; i < MAX_NUM_CAM; i++) {
             mCameraOpened[i] = false;
