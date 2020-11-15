@@ -3429,10 +3429,11 @@ public class CaptureModule implements CameraModule, PhotoController,
 
     public void onResumeBeforeSuper() {
         // must change cameraId before "mPaused = false;"
-        int intentCameraId = CameraUtil.getCameraFacingIntentExtras(mActivity);
-        if (intentCameraId != -1) {
-            mSettingsManager.setValue(SettingsManager.KEY_CAMERA_ID,
-                    String.valueOf(intentCameraId));
+        int facingOfIntentExtras = CameraUtil.getFacingOfIntentExtras(mActivity);
+        Log.v(TAG, "onResumeBeforeSuper facingOfIntentExtras :" + facingOfIntentExtras);
+        if (facingOfIntentExtras != -1) {
+            mSettingsManager.setValue(SettingsManager.KEY_SWITCH_CAMERA,
+                    facingOfIntentExtras == CameraUtil.FACING_BACK ? "rear" : "front");
         }
         mPaused = false;
         for (int i = 0; i < MAX_NUM_CAM; i++) {
