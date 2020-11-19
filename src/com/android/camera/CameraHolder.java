@@ -124,6 +124,13 @@ public class CameraHolder {
 
     // Use a singleton.
     private static CameraHolder sHolder;
+    public static synchronized CameraHolder instance(Context context) {
+        mContext = context;
+        if (sHolder == null) {
+            sHolder = new CameraHolder();
+        }
+        return sHolder;
+    }
     public static synchronized CameraHolder instance() {
         if (sHolder == null) {
             sHolder = new CameraHolder();
