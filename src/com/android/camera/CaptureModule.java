@@ -1558,17 +1558,17 @@ public class CaptureModule implements CameraModule, PhotoController,
 
     private void initModeByIntent() {
         String action = mActivity.getIntent().getAction();
-        Log.v(TAG, " initModeByIntent: " + action);
+        Log.e(TAG, " #VKTM initModeByIntent: " + action);
         Bundle bundle = mActivity.getIntent().getExtras();
         if (bundle != null) {
-            Log.v(TAG, " initModeByIntent bundle :" + bundle.toString());
+            Log.e(TAG, " #VKTM initModeByIntent bundle :" + bundle.toString());
         }
         if (MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA.equals(action)) {
             mIntentMode = INTENT_MODE_STILL_IMAGE_CAMERA;
             Set<String> categories = mActivity.getIntent().getCategories();
             if (categories != null) {
                 for(String categorie: categories) {
-                    Log.v(TAG, " initModeByIntent categorie :" + categorie);
+                    Log.e(TAG, "#VKTM initModeByIntent categorie :" + categorie);
                     if(categorie.equals("android.intent.category.VOICE")) {
                         mIsVoiceTakePhote = true;
                     }
@@ -1579,7 +1579,7 @@ public class CaptureModule implements CameraModule, PhotoController,
             if (isOpenOnly) {
                 mIsVoiceTakePhote = false;
             }
-            Log.v(TAG, " initModeByIntent isOpenOnly :" + isOpenOnly + ", mIsVoiceTakePhote :"
+            Log.e(TAG, "#VKTM  initModeByIntent isOpenOnly :" + isOpenOnly + ", mIsVoiceTakePhote :"
                     + mIsVoiceTakePhote);
         }
         if (MediaStore.ACTION_IMAGE_CAPTURE.equals(action)) {
@@ -1593,6 +1593,13 @@ public class CaptureModule implements CameraModule, PhotoController,
         Bundle myExtras = mActivity.getIntent().getExtras();
         if (myExtras != null) {
             mSaveUri = (Uri) myExtras.getParcelable(MediaStore.EXTRA_OUTPUT);
+	    if (mSaveUri != null) {
+                String uri = mSaveUri.toString();
+                if (uri != null && uri.contains("cts")){
+                    mQuickCapture = true;
+                    Log.e(TAG, " #VKTM mQuickCapture is true for CTS ");
+                }
+            }
             mCropValue = myExtras.getString("crop");
             mUseFrontCamera = myExtras.getBoolean("android.intent.extra.USE_FRONT_CAMERA", false)||
                     myExtras.getBoolean("com.google.assistant.extra.USE_FRONT_CAMERA", false);
