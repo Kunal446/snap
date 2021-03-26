@@ -1593,6 +1593,13 @@ public class CaptureModule implements CameraModule, PhotoController,
         Bundle myExtras = mActivity.getIntent().getExtras();
         if (myExtras != null) {
             mSaveUri = (Uri) myExtras.getParcelable(MediaStore.EXTRA_OUTPUT);
+            if (mSaveUri != null) {
+                String uri = mSaveUri.toString();
+                if (uri != null && uri.contains("cts")) {
+                    mQuickCapture = true;
+                    Log.v(TAG, " mQuickCapture is true for CTS ");
+                }
+            }
             mCropValue = myExtras.getString("crop");
             mUseFrontCamera = myExtras.getBoolean("android.intent.extra.USE_FRONT_CAMERA", false)||
                     myExtras.getBoolean("com.google.assistant.extra.USE_FRONT_CAMERA", false);
