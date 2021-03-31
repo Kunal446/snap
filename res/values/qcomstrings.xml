@@ -1190,7 +1190,7 @@
     <string name="pref_camera2_switch_camera_default" translatable="false">-1</string>
     <string name="pref_camera2_switch_camera_title" translatable="true">Switch camera by id</string>
 
-    <string name="pref_camera2_video_quality_default" translatable="false">720x480</string>
+    <string name="pref_camera2_video_quality_default" translatable="false">1920x1080</string>
 
     <string name="pref_camera2_video_hdr_title" translatable="true">Video HDR</string>
     <string name="pref_camera2_video_hdr_default" translatable="false">0</string>

@@ -1605,7 +1605,7 @@ private void filterHFROptions() {
 
     private List<String> getSupportedVideoEncoders() {
         ArrayList<String> supported = new ArrayList<String>();
-        supported.add(SettingTranslation.getVideoEncoder(MediaRecorder.VideoEncoder.H263));
+        supported.add(SettingTranslation.getVideoEncoder(MediaRecorder.VideoEncoder.DEFAULT));
         String str = null;
         MediaCodecList list = new MediaCodecList(MediaCodecList.ALL_CODECS);
         MediaCodecInfo[] codecInfos = list.getCodecInfos();
