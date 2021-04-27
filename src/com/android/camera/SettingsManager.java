@@ -1836,6 +1836,9 @@ private void filterHFROptions() {
 
     private boolean filterUnsupportedOptions(ListPreference pref, List<String> supported) {
         // Remove the preference if the parameter is not supported
+        if (pref == null) {
+            return false;
+        }
         if (supported == null) {
             removePreference(mPreferenceGroup, pref.getKey());
             return true;
